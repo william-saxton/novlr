@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { slugify } from "../../model/schema";
-	import { STATUS_COLORS, validateStatuses } from "../../model/status";
+	import { STATUS_COLORS, statusColorValue, validateStatuses } from "../../model/status";
 	import type { Project, StatusDef } from "../../model/types";
 	import { deepEqual } from "../../utils/deepEqual";
 	import { icon } from "../../utils/icons";
@@ -90,6 +90,20 @@
 	function apply(): void {
 		if (callbacks.setStatuses(project, statuses, renames).length === 0) seededFrom = null;
 	}
+
+	/** Hex colors already used by any status in this project, offered as extra swatches. */
+	let customColors = $derived(
+		[...new Set(draft.map((d) => d.color).filter((c): c is string => !!c && c.startsWith("#")))],
+	);
+
+	/** Value for the native color input; named colors have no fixed hex, so fall back to grey. */
+	function hexOf(color: string | undefined): string {
+		return color && color.startsWith("#") && (color.length === 7 || color.length === 4) ? expandHex(color) : "#888888";
+	}
+
+	function expandHex(c: string): string {
+		return c.length === 4 ? `#${c[1]}${c[1]}${c[2]}${c[2]}${c[3]}${c[3]}` : c;
+	}
 </script>
 
 <div class="novelr-field novelr-schema">
@@ -110,7 +124,7 @@
 					<div class="novelr-type-row" class:is-expanded={expanded === d.id}>
 						<button class="novelr-type-summary" onclick={() => (expanded = expanded === d.id ? null : d.id)}>
 							<span class="novelr-chevron" class:is-collapsed={expanded !== d.id} use:icon={"chevron-down"}></span>
-							<span class="novelr-status-dot novelr-color-{d.color ?? 'none'}" class:is-unset={!d.color}></span>
+							<span class="novelr-status-dot" style:--novelr-status-color={statusColorValue(d.color)} class:is-unset={!d.color}></span>
 							<span class="novelr-type-name">{d.name || "Unnamed"}</span>
 							<span class="novelr-row-type">{d.id}</span>
 							{#if d.default}<span class="novelr-badge">default</span>{/if}
@@ -131,8 +145,29 @@
 									<div class="novelr-chips">
 										<button class="novelr-chip" class:is-active={!d.color} onclick={() => delete d.color}>None</button>
 										{#each STATUS_COLORS as c (c)}
-											<button class="novelr-chip novelr-chip-color novelr-color-{c}" class:is-active={d.color === c} aria-label={c} title={c} onclick={() => (d.color = c)}></button>
+											<button
+												class="novelr-chip-color"
+												class:is-active={d.color === c}
+												style:--novelr-status-color={statusColorValue(c)}
+												aria-label={c}
+												title={c}
+												onclick={() => (d.color = c)}
+											></button>
 										{/each}
+										{#each customColors as c (c)}
+											<button
+												class="novelr-chip-color"
+												class:is-active={d.color === c}
+												style:--novelr-status-color={c}
+												aria-label={c}
+												title={c}
+												onclick={() => (d.color = c)}
+											></button>
+										{/each}
+										<label class="novelr-color-input" title="Pick any color">
+											<input type="color" value={hexOf(d.color)} oninput={(e) => (d.color = (e.currentTarget as HTMLInputElement).value)} />
+											<span class="novelr-row-icon" use:icon={"palette"}></span>
+										</label>
 									</div>
 								</div>
 								<label class="novelr-form-row">

@@ -3,6 +3,7 @@ import { mount, unmount } from "svelte";
 import { get } from "svelte/store";
 import type NovelrPlugin from "../main";
 import { confirm } from "../modals/ConfirmModal";
+import { IconSuggest } from "../modals/IconSuggest";
 import { promptNewNode } from "../modals/NewNodeModal";
 import { NewProjectModal } from "../modals/NewProjectModal";
 import { promptText } from "../modals/TextPromptModal";
@@ -158,6 +159,9 @@ export class NovelrView extends ItemView {
 				const file = this.app.vault.getFileByPath(path);
 				if (file) void this.app.workspace.getLeaf(false).openFile(file);
 				else new Notice(`${path} was not found.`);
+			},
+			attachIconSuggest: (input, onPick) => {
+				new IconSuggest(this.app, input, onPick);
 			},
 			showStatusMenu: (project, node, event) => {
 				const current = this.live(project) ?? project;

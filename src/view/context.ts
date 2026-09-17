@@ -20,6 +20,8 @@ export interface ViewCallbacks {
 	ignoreUnknown(project: Project, entry: UnknownEntry): void;
 	removeMissing(project: Project, path: string): void;
 	showStatusMenu(project: Project, node: ProjectNode, event: MouseEvent): void;
+	/** Attach an icon-id autocomplete to a text input. */
+	attachIconSuggest(input: HTMLInputElement, onPick: (id: string) => void): void;
 	/** Returns validation errors; applies when empty. */
 	setStatuses(project: Project, statuses: StatusDef[], renames: Record<string, string>): string[];
 	// Project

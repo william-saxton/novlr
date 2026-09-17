@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { filterByStatus } from "../src/compile/steps/filterStatus";
 import { NOVEL_SCHEMA } from "../src/model/schema";
 import { parseProject, serializeProject } from "../src/model/serialize";
-import { DEFAULT_STATUSES, computeEffectiveStatuses, validateStatuses } from "../src/model/status";
+import { DEFAULT_STATUSES, computeEffectiveStatuses, statusColorValue, validateStatuses } from "../src/model/status";
 import type { StatusDef } from "../src/model/types";
 import { tree } from "./helpers";
 
@@ -67,6 +67,15 @@ describe("statuses", () => {
 		expect(errors.some((e) => e.includes("Duplicate"))).toBe(true);
 		expect(errors.some((e) => e.includes("Only one"))).toBe(true);
 		expect(validateStatuses(DEFAULT_STATUSES)).toEqual([]);
+		expect(validateStatuses([{ id: "custom", name: "Custom", color: "#ff8800" }])).toEqual([]);
+		expect(validateStatuses([{ id: "custom", name: "Custom", color: "#ff88" }]).some((e) => e.includes("unknown color"))).toBe(true);
+	});
+
+	it("statusColorValue maps names to theme variables and passes hex through", () => {
+		expect(statusColorValue("red")).toBe("var(--color-red)");
+		expect(statusColorValue("#ff8800")).toBe("#ff8800");
+		expect(statusColorValue(undefined)).toBe("var(--text-faint)");
+		expect(statusColorValue("bogus")).toBe("var(--text-faint)");
 	});
 });
 

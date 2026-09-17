@@ -4,6 +4,7 @@
 	import { join } from "../../model/paths";
 	import { icon } from "../../utils/icons";
 	import { getCallbacks } from "../context";
+	import { statusColorValue } from "../../model/status";
 	import { describeStatus, type Row } from "./flatten";
 
 	let {
@@ -87,7 +88,8 @@
 	<span class="novelr-row-icon" use:icon={row.icon}></span>
 	<span class="novelr-row-title">{row.node.name}</span>
 	<button
-		class="novelr-status-dot novelr-color-{row.status.effective?.color ?? 'none'}"
+		class="novelr-status-dot"
+		style:--novelr-status-color={statusColorValue(row.status.effective?.color)}
 		class:is-derived={row.status.fromChildren}
 		class:is-unset={!row.status.effective && !row.status.unknownId}
 		class:is-unknown={row.status.unknownId !== undefined}

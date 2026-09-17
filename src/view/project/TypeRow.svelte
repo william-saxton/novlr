@@ -2,6 +2,14 @@
 	import { slugify } from "../../model/schema";
 	import type { NodeKind, NodeTypeDef } from "../../model/types";
 	import { icon } from "../../utils/icons";
+	import { getCallbacks } from "../context";
+
+	const callbacks = getCallbacks();
+
+	/** Svelte action: wire the Obsidian icon autocomplete onto a text input. */
+	function iconSuggest(el: HTMLInputElement, onPick: (id: string) => void): void {
+		callbacks.attachIconSuggest(el, onPick);
+	}
 
 	interface DraftType extends NodeTypeDef {
 		originalId: string;
@@ -103,7 +111,15 @@
 			{/if}
 			<label class="novelr-form-row">
 				<span>Icon</span>
-				<input type="text" bind:value={type.icon} placeholder="lucide icon name, e.g. book" />
+				<span class="novelr-icon-field">
+					<span class="novelr-row-icon" use:icon={type.icon || (type.kind === "container" ? "folder" : "file-text")}></span>
+					<input
+						type="text"
+						bind:value={type.icon}
+						placeholder="Type to search icons…"
+						use:iconSuggest={(id) => (type.icon = id)}
+					/>
+				</span>
 			</label>
 			<div class="novelr-inline">
 				<button class="clickable-icon novelr-icon-button" aria-label="Move up" use:icon={"arrow-up"} onclick={onmoveup}></button>

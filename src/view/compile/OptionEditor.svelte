@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { StepOption } from "../../compile/types";
+	import { statusColorValue } from "../../model/status";
 	import type { Project } from "../../model/types";
 	import NodeTypePicker from "./NodeTypePicker.svelte";
 
@@ -80,7 +81,7 @@
 						class:is-active={selected.includes(s.id)}
 						onclick={() => set(selected.includes(s.id) ? selected.filter((x) => x !== s.id) : [...selected, s.id])}
 					>
-						<span class="novelr-status-dot novelr-color-{s.color ?? 'none'}" class:is-unset={!s.color}></span>
+						<span class="novelr-status-dot" style:--novelr-status-color={statusColorValue(s.color)} class:is-unset={!s.color}></span>
 						{s.name}
 					</button>
 				{/each}

@@ -22,8 +22,18 @@ export function defaultStatusId(statuses: StatusDef[]): string | undefined {
 	return statuses.find((s) => s.default)?.id;
 }
 
-export function isStatusColor(v: unknown): v is StatusColor {
-	return typeof v === "string" && (STATUS_COLORS as readonly string[]).includes(v);
+const HEX_COLOR = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
+
+/** A status color is either one of the named accent colors or a hex color such as #ff8800. */
+export function isStatusColor(v: unknown): v is string {
+	return typeof v === "string" && ((STATUS_COLORS as readonly string[]).includes(v) || HEX_COLOR.test(v));
+}
+
+/** CSS value for a status color: theme variable for named colors, the hex itself otherwise. */
+export function statusColorValue(color: string | undefined): string {
+	if (!color) return "var(--text-faint)";
+	if ((STATUS_COLORS as readonly string[]).includes(color)) return `var(--color-${color})`;
+	return HEX_COLOR.test(color) ? color : "var(--text-faint)";
 }
 
 /** Returns problems; empty means valid. */
