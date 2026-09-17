@@ -21,4 +21,14 @@ export default tseslint.config(
 			"@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
 		},
 	},
+	{
+		// User compile scripts are user-authored code the user opts into by naming a folder;
+		// evaluating them is the feature, so the eval guards are relaxed for this file only.
+		files: ["src/compile/userScripts.ts"],
+		rules: {
+			"obsidianmd/rule-custom-message": "off",
+			"@typescript-eslint/no-implied-eval": "off",
+			"no-new-func": "off",
+		},
+	},
 );

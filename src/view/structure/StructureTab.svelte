@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Project } from "../../model/types";
-	import { collapsed, toggleCollapsed } from "../../store/ui";
+	import { collapsed, revealPath, toggleCollapsed } from "../../store/ui";
+	import { scriptErrors } from "../../compile/userScripts";
 	import { icon } from "../../utils/icons";
 	import { getCallbacks } from "../context";
 	import { DragController, type DragIndicator } from "./dragController";
@@ -37,6 +38,18 @@
 		});
 		return () => controller.destroy();
 	});
+
+	// Scroll to and focus a row when a command asks for it.
+	$effect(() => {
+		const path = $revealPath;
+		if (!path || !listEl) return;
+		const el = listEl.querySelector<HTMLElement>(`[data-path="${CSS.escape(path)}"]`);
+		if (el) {
+			el.scrollIntoView({ block: "nearest" });
+			el.focus();
+		}
+		revealPath.set(null);
+	});
 </script>
 
 <div class="novelr-structure">
@@ -54,6 +67,13 @@
 		<div class="novelr-callout novelr-callout-warning">
 			{#each project.warnings as warning, i (i)}
 				<div>{warning}</div>
+			{/each}
+		</div>
+	{/if}
+	{#if $scriptErrors.size > 0}
+		<div class="novelr-callout novelr-callout-error">
+			{#each [...$scriptErrors] as [path, message] (path)}
+				<div>{path}: {message}</div>
 			{/each}
 		</div>
 	{/if}

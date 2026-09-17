@@ -713,3 +713,11 @@
 	margin-left: var(--size-2-1);
 	cursor: help;
 }
+
+/* Settings */
+
+.novelr-import-textarea {
+	width: 100%;
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-small);
+}

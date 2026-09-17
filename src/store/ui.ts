@@ -10,6 +10,9 @@ export const activeFilePath = writable<string | null>(null);
 /** Collapsed containers, keyed by `${indexPath}::${nodePath}`. */
 export const collapsed = writable<Set<string>>(new Set());
 
+/** Node path the structure pane should scroll to and focus once; cleared after use. */
+export const revealPath = writable<string | null>(null);
+
 export function collapseKey(indexPath: string, nodePath: string): string {
 	return `${indexPath}::${nodePath}`;
 }

@@ -265,6 +265,11 @@ export class NovelrView extends ItemView {
 		void this.app.workspace.getLeaf(false).openFile(file);
 	}
 
+	/** Used by the "New node in current container" command. */
+	promptNewNode(project: Project, parent: ProjectNode): Promise<void> {
+		return this.newNode(project, parent);
+	}
+
 	private async newNode(project: Project, parent: ProjectNode, preferredTypeId?: string, index?: number): Promise<void> {
 		const current = this.live(project) ?? project;
 		const liveParent = findByPath(current.root, parent.path) ?? current.root;
