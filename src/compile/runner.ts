@@ -13,6 +13,7 @@ import {
 	type NodeCompile,
 	type ProgressCallback,
 	type RunResult,
+	type TreeCompile,
 	type ValidationResult,
 	type Workflow,
 } from "./types";
@@ -33,7 +34,7 @@ export function validateWorkflow(workflow: Workflow, registry: StepRegistry, sch
 			return;
 		}
 		const kind = step.description.kind;
-		if (kind === "node" && seenJoin) errors.push(`Step ${n} (${step.description.name}) works on nodes but comes after the manuscript is built.`);
+		if ((kind === "node" || kind === "tree") && seenJoin) errors.push(`Step ${n} (${step.description.name}) works on the structure but comes after the manuscript is built.`);
 		if (kind === "manuscript" && !seenJoin) errors.push(`Step ${n} (${step.description.name}) works on the manuscript but no build step comes before it.`);
 		if (kind === "join") {
 			joins++;
@@ -71,7 +72,6 @@ export interface RunParams {
 export async function runWorkflow(params: RunParams): Promise<RunResult> {
 	const { app, project, root, workflow, registry, env, onProgress } = params;
 	const result: RunResult = { ok: true, log: [], outputs: {} };
-	const nodes = flattenNodes(root);
 	let manuscript: string | null = null;
 
 	for (let i = 0; i < workflow.steps.length; i++) {
@@ -109,12 +109,14 @@ export async function runWorkflow(params: RunParams): Promise<RunResult> {
 				const set = Array.isArray(targets) ? new Set(targets.filter((t): t is string => typeof t === "string")) : new Set<string>();
 				const compile = step.compile as NodeCompile;
 				let touched = 0;
-				for (const node of nodes) {
+				for (const node of flattenNodes(root)) {
 					if (set.size > 0 && !set.has(node.typeId)) continue;
 					await compile(node, ctx);
 					touched++;
 				}
 				messages.push(`${touched} node${touched === 1 ? "" : "s"}`);
+			} else if (step.description.kind === "tree") {
+				await (step.compile as TreeCompile)(root, ctx);
 			} else if (step.description.kind === "join") {
 				manuscript = await (step.compile as JoinCompile)(root, ctx);
 				messages.push(`${manuscript.length} characters`);

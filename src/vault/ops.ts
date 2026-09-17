@@ -3,7 +3,8 @@ import type NovelrPlugin from "../main";
 import { basename, dirname, join, relativeTo, validateName } from "../model/paths";
 import { canContain, defaultContainerType, defaultContentType, typeById } from "../model/schema";
 import { applySchemaChange, checkSchemaChange, missingTypesForPreset } from "../model/schemaOps";
-import { FRONTMATTER_KEY, NODE_TYPE_KEY, newContentFileText } from "../model/serialize";
+import { FRONTMATTER_KEY, NODE_TYPE_KEY, STATUS_KEY, newContentFileText } from "../model/serialize";
+import { cloneStatuses, defaultStatusId, statusById, validateStatuses } from "../model/status";
 import {
 	cloneTree,
 	findByPath,
@@ -13,8 +14,9 @@ import {
 	removeByPath,
 	siblingNames,
 	uniqueName,
+	walk,
 } from "../model/tree";
-import type { Project, ProjectNode, Schema, SchemaPreset, UnknownEntry } from "../model/types";
+import type { Project, ProjectNode, Schema, SchemaPreset, StatusDef, UnknownEntry } from "../model/types";
 import { updateProject } from "../store/projects";
 import { applyRename } from "./applyRename";
 
@@ -68,7 +70,9 @@ export class NodeOps {
 			return null;
 		}
 		const name = uniqueName(rawName.trim(), siblingNames(parent));
+		const status = defaultStatusId(project.statuses);
 		const node: ProjectNode = { typeId, kind: def.kind, name, path: "", children: [] };
+		if (status) node.status = status;
 		this.commit(project, (p) => {
 			const liveParent = findByPath(p.root, parentPath);
 			if (liveParent) insertChild(liveParent, node, index);
@@ -81,7 +85,7 @@ export class NodeOps {
 			} else if (!this.app.vault.getFileByPath(target)) {
 				const parentFolder = dirname(target);
 				if (parentFolder && !this.app.vault.getFolderByPath(parentFolder)) await this.app.vault.createFolder(parentFolder);
-				await this.app.vault.create(target, newContentFileText(typeId, this.plugin.settings.writeNodeType));
+				await this.app.vault.create(target, newContentFileText(typeId, status, this.plugin.settings.writeNodeType));
 			}
 		} catch (e) {
 			console.error("Novelr: create failed", e);
@@ -219,6 +223,52 @@ export class NodeOps {
 		return true;
 	}
 
+	// ---- status -------------------------------------------------------------
+
+	/** Set (or clear with null) a node's explicit status; mirrors it into content frontmatter when enabled. */
+	async setStatus(project: Project, node: ProjectNode, statusId: string | null): Promise<void> {
+		if (statusId !== null && !statusById(project.statuses, statusId)) return;
+		this.commit(project, (p) => {
+			const live = findByPath(p.root, node.path);
+			if (!live) return;
+			if (statusId === null) delete live.status;
+			else live.status = statusId;
+		});
+		if (node.kind === "content" && this.plugin.settings.writeNodeType) {
+			const file = this.app.vault.getFileByPath(this.vaultPath(project, node.path));
+			if (file) {
+				await this.app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
+					if (statusId === null) delete fm[STATUS_KEY];
+					else fm[STATUS_KEY] = statusId;
+				});
+			}
+		}
+	}
+
+	/** Replace the status list. Renames map old ids to new ones for nodes that use them. Returns errors. */
+	setStatuses(project: Project, statuses: StatusDef[], renames: Record<string, string>): string[] {
+		const errors = validateStatuses(statuses);
+		if (errors.length > 0) return errors;
+		const ids = new Set(statuses.map((s) => s.id));
+		const orphaned = new Set<string>();
+		walk(project.root, (n) => {
+			if (n.status === undefined) return;
+			const next = renames[n.status] ?? n.status;
+			if (!ids.has(next)) orphaned.add(n.status);
+		});
+		if (orphaned.size > 0) {
+			return [`Nodes still use status${orphaned.size === 1 ? "" : "es"} ${[...orphaned].map((s) => `"${s}"`).join(", ")}. Change them first or keep the status.`];
+		}
+		this.commit(project, (p) => {
+			walk(p.root, (n) => {
+				if (n.status !== undefined && renames[n.status]) n.status = renames[n.status];
+			});
+			p.statuses = cloneStatuses(statuses);
+			p.warnings = [];
+		});
+		return [];
+	}
+
 	// ---- unknown / missing --------------------------------------------------
 
 	/** Pick a type for an unknown entry under `parentTypeId`, honoring the frontmatter hint. */
@@ -257,6 +307,9 @@ export class NodeOps {
 		if (!def) return null;
 		const name = entry.isFolder ? basename(entry.path) : basename(entry.path).replace(/\.md$/i, "");
 		const node: ProjectNode = { typeId, kind: def.kind, name, path: entry.path, children: [] };
+		const status =
+			entry.guessedStatus && statusById(project.statuses, entry.guessedStatus) ? entry.guessedStatus : defaultStatusId(project.statuses);
+		if (status) node.status = status;
 		if (!entry.isFolder) return node;
 		const folder = this.app.vault.getFolderByPath(this.vaultPath(project, entry.path));
 		if (!folder) return node;
@@ -266,10 +319,15 @@ export class NodeOps {
 			if (rel === null) continue;
 			const isFolder = child instanceof TFolder;
 			if (!isFolder && !child.path.toLowerCase().endsWith(".md")) continue;
-			const guessed: unknown = isFolder
-				? undefined
-				: this.app.metadataCache.getFileCache(child as never)?.frontmatter?.[NODE_TYPE_KEY];
-			const childEntry: UnknownEntry = { path: rel, isFolder, ...(typeof guessed === "string" ? { guessedType: guessed } : {}) };
+			const fm = isFolder ? undefined : this.app.metadataCache.getFileCache(child as never)?.frontmatter;
+			const guessed: unknown = fm?.[NODE_TYPE_KEY];
+			const guessedStatus: unknown = fm?.[STATUS_KEY];
+			const childEntry: UnknownEntry = {
+				path: rel,
+				isFolder,
+				...(typeof guessed === "string" ? { guessedType: guessed } : {}),
+				...(typeof guessedStatus === "string" ? { guessedStatus } : {}),
+			};
 			const childType = this.suggestType(project, childEntry, typeId);
 			if (!childType) continue;
 			const childNode = this.buildFromDisk(project, childEntry, childType);

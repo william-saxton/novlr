@@ -1,10 +1,12 @@
 import { basename, dirname, stripMd } from "./paths";
 import { RESERVED_TYPE_IDS, typeById, validateSchema } from "./schema";
-import { recomputePaths } from "./tree";
-import type { NodeKind, Project, ProjectFrontmatter, ProjectNode, Schema, TreeEntry } from "./types";
+import { DEFAULT_STATUSES, cloneStatuses, isStatusColor, validateStatuses } from "./status";
+import { recomputePaths, walk } from "./tree";
+import type { NodeKind, Project, ProjectFrontmatter, ProjectNode, Schema, StatusDef, TreeEntry } from "./types";
 
 export const FRONTMATTER_KEY = "novelr";
 export const NODE_TYPE_KEY = "novelr-type";
+export const STATUS_KEY = "novelr-status";
 export const SKIP_KEY = "novelr-skip";
 
 export interface ParseResult {
@@ -73,15 +75,17 @@ function parseTree(raw: unknown, schema: Schema, warnings: string[], where: stri
 		let typeId: string;
 		let name: string;
 		let rawChildren: unknown;
+		let status: string | undefined;
 		if (typeof entry === "string") {
 			typeId = fallbackContent;
 			name = entry;
 			rawChildren = undefined;
+			status = undefined;
 			warnings.push(`"${entry}" in ${where} has no type; treated as ${typeId}.`);
 		} else if (isRecord(entry)) {
-			const keys = Object.keys(entry).filter((k) => k !== "children");
+			const keys = Object.keys(entry).filter((k) => !RESERVED_TYPE_IDS.has(k));
 			const key = keys[0];
-			if (keys.length !== 1 || key === undefined || RESERVED_TYPE_IDS.has(key)) {
+			if (keys.length !== 1 || key === undefined) {
 				warnings.push(`Ignored malformed entry in ${where} (expected exactly one type key).`);
 				continue;
 			}
@@ -93,6 +97,7 @@ function parseTree(raw: unknown, schema: Schema, warnings: string[], where: stri
 			typeId = key;
 			name = value;
 			rawChildren = entry["children"];
+			status = asString(entry["status"]);
 		} else {
 			warnings.push(`Ignored malformed entry in ${where}.`);
 			continue;
@@ -107,6 +112,7 @@ function parseTree(raw: unknown, schema: Schema, warnings: string[], where: stri
 		if (!typeById(schema, typeId)) warnings.push(`"${name}" uses unknown type "${typeId}".`);
 		const kind = defaultKindFor(typeId, schema, hasChildren);
 		const node: ProjectNode = { typeId, kind, name, path: "", children: [] };
+		if (status !== undefined) node.status = status;
 		if (kind === "content") {
 			if (hasChildren) warnings.push(`"${name}" is a ${typeId} (content) and cannot have children; they were dropped.`);
 		} else {
@@ -131,6 +137,7 @@ export function parseProject(indexPath: string, raw: unknown): ParseResult {
 	const title = asString(raw["title"]) ?? stripMd(basename(indexPath));
 	const workflow = asString(raw["workflow"]) ?? null;
 	const ignore = Array.isArray(raw["ignore"]) ? raw["ignore"].filter((s): s is string => typeof s === "string") : [];
+	const statuses = parseStatuses(raw["statuses"], warnings);
 	const root: ProjectNode = {
 		typeId: schema.rootType,
 		kind: "container",
@@ -138,18 +145,58 @@ export function parseProject(indexPath: string, raw: unknown): ParseResult {
 		path: "",
 		children: parseTree(raw["tree"], schema, warnings, "tree"),
 	};
+	const rootStatus = asString(raw["rootStatus"]);
+	if (rootStatus !== undefined) root.status = rootStatus;
 	recomputePaths(root, null);
+	const known = new Set(statuses.map((s) => s.id));
+	walk(root, (node) => {
+		if (node.status !== undefined && !known.has(node.status)) warnings.push(`"${node.name}" has unknown status "${node.status}".`);
+	});
 	return {
-		project: { indexPath, rootFolder, title, schema, root, workflow, ignore, unknown: [], missing: [], warnings },
+		project: { indexPath, rootFolder, title, schema, statuses, root, workflow, ignore, unknown: [], missing: [], warnings },
 		warnings,
 	};
+}
+
+function parseStatuses(raw: unknown, warnings: string[]): StatusDef[] {
+	if (raw === undefined) return cloneStatuses(DEFAULT_STATUSES);
+	if (!Array.isArray(raw)) {
+		warnings.push("Expected a list under statuses; using the defaults.");
+		return cloneStatuses(DEFAULT_STATUSES);
+	}
+	const out: StatusDef[] = [];
+	for (const s of raw) {
+		if (!isRecord(s) || typeof s["id"] !== "string") {
+			warnings.push("Ignored a status entry without an id.");
+			continue;
+		}
+		const def: StatusDef = { id: s["id"], name: asString(s["name"]) ?? s["id"] };
+		if (isStatusColor(s["color"])) def.color = s["color"];
+		const parent = asString(s["parent"]);
+		if (parent !== undefined) def.parent = parent;
+		if (s["default"] === true) def.default = true;
+		out.push(def);
+	}
+	for (const problem of validateStatuses(out)) warnings.push(`Statuses: ${problem}`);
+	return out;
 }
 
 function serializeTree(nodes: ProjectNode[]): TreeEntry[] {
 	return nodes.map((n) => {
 		const entry: TreeEntry = { [n.typeId]: n.name };
+		if (n.status !== undefined) entry["status"] = n.status;
 		if (n.kind === "container" && n.children.length > 0) entry["children"] = serializeTree(n.children);
 		return entry;
+	});
+}
+
+function serializeStatuses(statuses: StatusDef[]): StatusDef[] {
+	return statuses.map((s) => {
+		const out: StatusDef = { id: s.id, name: s.name };
+		if (s.color) out.color = s.color;
+		if (s.parent) out.parent = s.parent;
+		if (s.default) out.default = true;
+		return out;
 	});
 }
 
@@ -166,14 +213,19 @@ export function serializeProject(project: Project): ProjectFrontmatter {
 				return out;
 			}),
 		},
+		statuses: serializeStatuses(project.statuses),
 		tree: serializeTree(project.root.children),
 	};
 	if (project.workflow) fm.workflow = project.workflow;
 	if (project.ignore.length > 0) fm.ignore = [...project.ignore];
+	if (project.root.status !== undefined) fm.rootStatus = project.root.status;
 	return fm;
 }
 
 /** Frontmatter block for a brand-new content file. */
-export function newContentFileText(typeId: string, writeType: boolean): string {
-	return writeType ? `---\n${NODE_TYPE_KEY}: ${typeId}\n---\n\n` : "";
+export function newContentFileText(typeId: string, statusId: string | undefined, writeMetadata: boolean): string {
+	if (!writeMetadata) return "";
+	const lines = [`${NODE_TYPE_KEY}: ${typeId}`];
+	if (statusId) lines.push(`${STATUS_KEY}: ${statusId}`);
+	return `---\n${lines.join("\n")}\n---\n\n`;
 }

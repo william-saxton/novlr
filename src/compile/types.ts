@@ -31,6 +31,8 @@ export interface CompileNode {
 	path: string;
 	/** Content only: frontmatter as parsed by Obsidian, before any stripping. */
 	frontmatter: Record<string, unknown>;
+	/** Effective status (children push theirs up), or null when unset. */
+	status: { id: string; name: string } | null;
 	/** Content body; "" for containers. */
 	text: string;
 	/** Decorations rendered above the body, in insertion order. */
@@ -41,7 +43,11 @@ export interface CompileNode {
 	numbering: Numbering;
 }
 
-export type StepKind = "node" | "join" | "manuscript";
+/**
+ * node: runs on each targeted node. tree: sees the whole tree before it is built (prune,
+ * reorder). join: turns the tree into text. manuscript: edits the text.
+ */
+export type StepKind = "node" | "tree" | "join" | "manuscript";
 
 interface OptionBase {
 	id: string;
@@ -54,7 +60,8 @@ export type StepOption =
 	| (OptionBase & { type: "text"; default: string; placeholders?: boolean })
 	| (OptionBase & { type: "multiline-text"; default: string; placeholders?: boolean })
 	| (OptionBase & { type: "select"; default: string; choices: { value: string; label: string }[] })
-	| (OptionBase & { type: "node-types"; default: string[] });
+	| (OptionBase & { type: "node-types"; default: string[] })
+	| (OptionBase & { type: "statuses"; default: string[] });
 
 export interface StepDescription {
 	/** Built-ins use a plain slug; user scripts use "user:<basename>". */
@@ -89,11 +96,13 @@ export interface CompileContext {
 }
 
 export type NodeCompile = (node: CompileNode, ctx: CompileContext) => void | Promise<void>;
+export type TreeCompile = (root: CompileNode, ctx: CompileContext) => void | Promise<void>;
 export type JoinCompile = (root: CompileNode, ctx: CompileContext) => string | Promise<string>;
 export type ManuscriptCompile = (text: string, ctx: CompileContext) => string | Promise<string>;
 
 export type CompileStep =
 	| { description: StepDescription & { kind: "node" }; compile: NodeCompile }
+	| { description: StepDescription & { kind: "tree" }; compile: TreeCompile }
 	| { description: StepDescription & { kind: "join" }; compile: JoinCompile }
 	| { description: StepDescription & { kind: "manuscript" }; compile: ManuscriptCompile };
 

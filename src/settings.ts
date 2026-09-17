@@ -64,8 +64,8 @@ export class NovelrSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Write node type to new files")
-			.setDesc("Add a novelr-type property to content files created from the structure pane.")
+			.setName("Write node type and status to files")
+			.setDesc("Keep novelr-type and novelr-status properties on content files in sync so other plugins can query them.")
 			.addToggle((toggle) =>
 				toggle.setValue(this.plugin.settings.writeNodeType).onChange(async (value) => {
 					this.plugin.settings.writeNodeType = value;

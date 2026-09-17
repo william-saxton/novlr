@@ -4,7 +4,7 @@
 	import { join } from "../../model/paths";
 	import { icon } from "../../utils/icons";
 	import { getCallbacks } from "../context";
-	import type { Row } from "./flatten";
+	import { describeStatus, type Row } from "./flatten";
 
 	let {
 		row,
@@ -86,6 +86,18 @@
 	{/if}
 	<span class="novelr-row-icon" use:icon={row.icon}></span>
 	<span class="novelr-row-title">{row.node.name}</span>
+	<button
+		class="novelr-status-dot novelr-color-{row.status.effective?.color ?? 'none'}"
+		class:is-derived={row.status.fromChildren}
+		class:is-unset={!row.status.effective && !row.status.unknownId}
+		class:is-unknown={row.status.unknownId !== undefined}
+		aria-label={describeStatus(row.status)}
+		title={describeStatus(row.status)}
+		onclick={(e) => {
+			e.stopPropagation();
+			callbacks.showStatusMenu(project, row.node, e);
+		}}
+	></button>
 	{#if row.missing}
 		<span class="novelr-row-badge" title="Not found on disk" use:icon={"alert-triangle"}></span>
 	{:else if row.unknownType}

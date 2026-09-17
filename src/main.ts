@@ -1,4 +1,4 @@
-import { Notice, Plugin, type WorkspaceLeaf } from "obsidian";
+import { type App, FuzzySuggestModal, Notice, Plugin, type WorkspaceLeaf } from "obsidian";
 import { get } from "svelte/store";
 import { CompileService } from "./compile/service";
 import { UserScriptLoader } from "./compile/userScripts";
@@ -143,6 +143,17 @@ export default class NovelrPlugin extends Plugin {
 		});
 
 		this.addCommand({
+			id: "set-status",
+			name: "Set status of current node",
+			checkCallback: (checking) => {
+				const located = this.activeNode();
+				if (!located) return false;
+				if (!checking) new StatusSuggestModal(this.app, this, located.project, located.node).open();
+				return true;
+			},
+		});
+
+		this.addCommand({
 			id: "new-node",
 			name: "New node in current container",
 			checkCallback: (checking) => {
@@ -247,5 +258,31 @@ export default class NovelrPlugin extends Plugin {
 
 	notice(message: string): void {
 		new Notice(message);
+	}
+}
+
+type StatusChoice = { id: string | null; name: string };
+
+class StatusSuggestModal extends FuzzySuggestModal<StatusChoice> {
+	constructor(
+		app: App,
+		private readonly plugin: NovelrPlugin,
+		private readonly project: Project,
+		private readonly node: ProjectNode,
+	) {
+		super(app);
+		this.setPlaceholder(`Status for ${node.name}`);
+	}
+
+	getItems(): StatusChoice[] {
+		return [...this.project.statuses.map((s) => ({ id: s.id, name: s.name })), { id: null, name: "No status" }];
+	}
+
+	getItemText(item: StatusChoice): string {
+		return item.name;
+	}
+
+	onChooseItem(item: StatusChoice): void {
+		void this.plugin.ops.setStatus(this.project, this.node, item.id);
 	}
 }

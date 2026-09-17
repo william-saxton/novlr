@@ -1,7 +1,7 @@
 import type { NodeTypeDef, Schema, SchemaPreset } from "./types";
 
 export const TYPE_ID_PATTERN = /^[a-z][a-z0-9-]*$/;
-export const RESERVED_TYPE_IDS = new Set(["children"]);
+export const RESERVED_TYPE_IDS = new Set(["children", "status"]);
 
 export const NOVEL_SCHEMA: Schema = {
 	rootType: "novel",

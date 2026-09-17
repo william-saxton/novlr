@@ -28,7 +28,7 @@
 	let open = $state(false);
 	let options = $derived(description ? optionsFor(description) : []);
 
-	const kindLabel: Record<string, string> = { node: "nodes", join: "build", manuscript: "manuscript" };
+	const kindLabel: Record<string, string> = { node: "nodes", tree: "structure", join: "build", manuscript: "manuscript" };
 
 	let summary = $derived.by(() => {
 		if (!description) return "";

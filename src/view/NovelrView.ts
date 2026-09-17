@@ -159,6 +159,18 @@ export class NovelrView extends ItemView {
 				if (file) void this.app.workspace.getLeaf(false).openFile(file);
 				else new Notice(`${path} was not found.`);
 			},
+			showStatusMenu: (project, node, event) => {
+				const current = this.live(project) ?? project;
+				const menu = new Menu();
+				this.addStatusItems(menu, current, node);
+				menu.showAtMouseEvent(event);
+			},
+			setStatuses: (project, statuses, renames) => {
+				const current = this.live(project) ?? project;
+				const errors = this.ops.setStatuses(current, statuses, renames);
+				if (errors.length === 0) new Notice("Statuses updated.");
+				return errors;
+			},
 			// Project
 			setTitle: (project, title) => this.ops.setTitle(this.live(project) ?? project, title),
 			setIgnore: (project, patterns) => this.ops.setIgnore(this.live(project) ?? project, patterns),
@@ -348,6 +360,27 @@ export class NovelrView extends ItemView {
 		menu.showAtPosition({ x: this.contentEl.getBoundingClientRect().left + 40, y: this.contentEl.getBoundingClientRect().top + 80 });
 	}
 
+	/** One item per status plus "No status"; the current explicit status is checked. */
+	private addStatusItems(menu: Menu, project: Project, node: ProjectNode): void {
+		const live = findByPath(project.root, node.path) ?? node;
+		for (const s of project.statuses) {
+			menu.addItem((item) =>
+				item
+					.setTitle(s.name)
+					.setIcon(s.color ? "circle" : "circle-dashed")
+					.setChecked(live.status === s.id)
+					.onClick(() => void this.ops.setStatus(project, live, s.id)),
+			);
+		}
+		menu.addItem((item) =>
+			item
+				.setTitle("No status")
+				.setIcon("circle-off")
+				.setChecked(live.status === undefined)
+				.onClick(() => void this.ops.setStatus(project, live, null)),
+		);
+	}
+
 	private showNodeMenu(project: Project, node: ProjectNode, event: MouseEvent): void {
 		const current = this.live(project) ?? project;
 		const menu = new Menu();
@@ -387,6 +420,18 @@ export class NovelrView extends ItemView {
 			}
 		}
 		menu.addSeparator();
+		if (current.statuses.length > 0) {
+			menu.addItem((item) =>
+				item
+					.setTitle("Set status…")
+					.setIcon("circle-dot")
+					.onClick(() => {
+						const statusMenu = new Menu();
+						this.addStatusItems(statusMenu, current, node);
+						statusMenu.showAtMouseEvent(event);
+					}),
+			);
+		}
 		menu.addItem((item) =>
 			item
 				.setTitle("Rename")

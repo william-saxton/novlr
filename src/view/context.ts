@@ -1,6 +1,6 @@
 import { getContext } from "svelte";
 import type { ProgressCallback, RunResult, StepDescription, ValidationResult, Workflow } from "../compile/types";
-import type { Project, ProjectNode, Schema, SchemaPreset, UnknownEntry } from "../model/types";
+import type { Project, ProjectNode, Schema, SchemaPreset, StatusDef, UnknownEntry } from "../model/types";
 
 /**
  * Imperative operations the Svelte tree needs but must not perform itself.
@@ -19,6 +19,9 @@ export interface ViewCallbacks {
 	addUnknown(project: Project, entry: UnknownEntry): void;
 	ignoreUnknown(project: Project, entry: UnknownEntry): void;
 	removeMissing(project: Project, path: string): void;
+	showStatusMenu(project: Project, node: ProjectNode, event: MouseEvent): void;
+	/** Returns validation errors; applies when empty. */
+	setStatuses(project: Project, statuses: StatusDef[], renames: Record<string, string>): string[];
 	// Project
 	setTitle(project: Project, title: string): void;
 	setIgnore(project: Project, patterns: string[]): void;

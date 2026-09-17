@@ -721,3 +721,71 @@
 	font-family: var(--font-monospace);
 	font-size: var(--font-ui-small);
 }
+
+/* Statuses */
+
+.novelr-status-dot {
+	flex-shrink: 0;
+	width: 10px;
+	height: 10px;
+	padding: 0;
+	border-radius: 50%;
+	border: 2px solid var(--novelr-status-color, var(--text-faint));
+	background: var(--novelr-status-color, var(--text-faint));
+	box-shadow: none;
+	cursor: var(--cursor);
+	display: inline-block;
+}
+
+.novelr-status-dot.is-derived {
+	background: transparent;
+}
+
+.novelr-status-dot.is-unset {
+	background: transparent;
+	border-style: dashed;
+	opacity: 0.5;
+}
+
+.novelr-row .novelr-status-dot.is-unset {
+	opacity: 0;
+}
+
+.novelr-row:hover .novelr-status-dot.is-unset,
+.novelr-row:focus-within .novelr-status-dot.is-unset {
+	opacity: 0.5;
+}
+
+.novelr-status-dot.is-unknown {
+	--novelr-status-color: var(--text-error);
+}
+
+.novelr-color-red { --novelr-status-color: var(--color-red); }
+.novelr-color-orange { --novelr-status-color: var(--color-orange); }
+.novelr-color-yellow { --novelr-status-color: var(--color-yellow); }
+.novelr-color-green { --novelr-status-color: var(--color-green); }
+.novelr-color-cyan { --novelr-status-color: var(--color-cyan); }
+.novelr-color-blue { --novelr-status-color: var(--color-blue); }
+.novelr-color-purple { --novelr-status-color: var(--color-purple); }
+.novelr-color-pink { --novelr-status-color: var(--color-pink); }
+.novelr-color-none { --novelr-status-color: var(--text-faint); }
+
+.novelr-chip .novelr-status-dot {
+	width: 8px;
+	height: 8px;
+	margin-right: var(--size-2-1);
+	vertical-align: middle;
+}
+
+.novelr-chip-color {
+	width: 18px;
+	height: 18px;
+	padding: 0;
+	border-radius: 50%;
+	background: var(--novelr-status-color);
+	border: 2px solid transparent;
+}
+
+.novelr-chip-color.is-active {
+	border-color: var(--text-normal);
+}

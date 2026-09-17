@@ -2,7 +2,7 @@ import { type CachedMetadata, TAbstractFile, TFile, TFolder } from "obsidian";
 import { get } from "svelte/store";
 import type NovelrPlugin from "../main";
 import { relativeTo } from "../model/paths";
-import { FRONTMATTER_KEY, NODE_TYPE_KEY, parseProject, serializeProject } from "../model/serialize";
+import { FRONTMATTER_KEY, NODE_TYPE_KEY, STATUS_KEY, parseProject, serializeProject } from "../model/serialize";
 import type { Project, ProjectFrontmatter } from "../model/types";
 import { projectContaining, projects, removeProject, selectedIndexPath, setProject, updateProject } from "../store/projects";
 import { activeFilePath } from "../store/ui";
@@ -80,8 +80,15 @@ export class ProjectManager {
 					entries.push({ path: rel, isFolder: true });
 					visit(child);
 				} else if (child instanceof TFile && child.extension === "md") {
-					const guessed: unknown = metadataCache.getFileCache(child)?.frontmatter?.[NODE_TYPE_KEY];
-					entries.push({ path: rel, isFolder: false, ...(typeof guessed === "string" ? { guessedType: guessed } : {}) });
+					const fm = metadataCache.getFileCache(child)?.frontmatter;
+					const guessed: unknown = fm?.[NODE_TYPE_KEY];
+					const guessedStatus: unknown = fm?.[STATUS_KEY];
+					entries.push({
+						path: rel,
+						isFolder: false,
+						...(typeof guessed === "string" ? { guessedType: guessed } : {}),
+						...(typeof guessedStatus === "string" ? { guessedStatus } : {}),
+					});
 				}
 			}
 		};

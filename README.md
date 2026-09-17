@@ -59,17 +59,44 @@ Each tree entry is `<typeId>: <name>`, optionally with `children`. Paths are der
 
 Content notes get a `novelr-type` property when Novelr creates them, so Dataview and friends can query by type. Add `novelr-skip: true` to a note to leave it out of every compile.
 
+## Statuses
+
+Every node can carry a status such as New, In progress or Done. Statuses are defined per project in the **Project** tab and each one has:
+
+- a **color** shown as a dot next to the node,
+- an optional **parent status** that it pushes onto the node containing it,
+- a **default** flag for newly created nodes.
+
+Pushing works all the way up. With the defaults, a chapter marked Done that gains a New scene shows In progress (hollow dot, tooltip says why), and so does the novel above it. When the scene is finished, the chapter shows Done again. If several children push different statuses, the one listed first wins, so order the list from "most attention needed" down.
+
+Click a node's dot, right-click and choose **Set status…**, or run **Novelr: Set status of current node**. Content notes also get a `novelr-status` property when "Write node type and status to files" is on.
+
+```yaml
+novelr:
+  statuses:
+    - { id: new, name: New, color: blue, parent: in-progress, default: true }
+    - { id: in-progress, name: In progress, color: yellow, parent: in-progress }
+    - { id: done, name: Done, color: green }
+  tree:
+    - chapter: Chapter One
+      status: done
+      children:
+        - scene: Opening
+          status: new
+```
+
 ## Compile
 
-A workflow is a sequence of steps of three kinds:
+A workflow is a sequence of steps of four kinds:
 
 | Kind | What it sees | Built-in steps |
 |---|---|---|
 | Node | every node whose type matches the step's **Apply to** list (empty = all) | Strip frontmatter, Remove links, Remove comments, Remove strikethroughs, Remove headings, Insert before, Insert after, Find and replace, Trim whitespace |
+| Structure | the whole tree, before it is built | Filter by status |
 | Build | the whole tree, once | Build manuscript |
 | Manuscript | the flattened text | Normalize blank lines, Find and replace, Add frontmatter, Save as note |
 
-Node steps come first, then one build step, then manuscript steps. **Insert before** and **Insert after** attach text to nodes of a given type, which is how you get chapter headings, part pages or scene separators:
+Node and structure steps come first, then one build step, then manuscript steps. **Filter by status** leaves out nodes with chosen statuses (a container's effective status counts, so a whole In progress chapter can be dropped) or keeps only content with chosen statuses, and renumbers what remains. **Insert before** and **Insert after** attach text to nodes of a given type, which is how you get chapter headings, part pages or scene separators:
 
 - Chapter headings: *Insert before* on `chapter` with `# Chapter {number}: {title}`
 - Scene separators: *Insert before* on `scene` with `* * *` and **Skip the first** on
@@ -79,7 +106,7 @@ Node steps come first, then one build step, then manuscript steps. **Insert befo
 
 | Placeholder | Meaning |
 |---|---|
-| `{title}` `{type}` | the node's name and type id |
+| `{title}` `{type}` `{status}` `{status.id}` | the node's name, type id, effective status name and id |
 | `{number}` | position among siblings of the same type (1-based) |
 | `{count}` `{index}` `{absolute}` `{depth}` | siblings of this type, 0-based position among all siblings, position of this type across the whole project, nesting depth |
 | `{number:word}` `{number:Word}` `{number:WORD}` `{number:roman}` `{number:Roman}` `{number:pad2}` | number formatting (works on any numeric placeholder) |
@@ -98,7 +125,7 @@ module.exports = {
   description: {
     name: "Shout",
     description: "Uppercases every scene.",
-    kind: "node", // "node" | "join" | "manuscript"
+    kind: "node", // "node" | "tree" | "join" | "manuscript"
     options: [{ id: "suffix", name: "Suffix", type: "text", default: "!" }],
   },
   compile(node, ctx) {
@@ -107,7 +134,7 @@ module.exports = {
 };
 ```
 
-Node steps receive `(node, ctx)` and mutate `node.text`, `node.before` or `node.after`. Build steps receive `(root, ctx)` and return a string. Manuscript steps receive `(text, ctx)` and return a string. `ctx.format(fmt, node)` expands placeholders, `ctx.app` is the Obsidian app, and `require("obsidian")` is available.
+Node steps receive `(node, ctx)` and mutate `node.text`, `node.before` or `node.after`. Tree steps receive `(root, ctx)` and may prune or reorder `children`. Build steps receive `(root, ctx)` and return a string. Manuscript steps receive `(text, ctx)` and return a string. `ctx.format(fmt, node)` expands placeholders, `ctx.app` is the Obsidian app, and `require("obsidian")` is available.
 
 ## Commands
 
@@ -118,6 +145,7 @@ Node steps receive `(node, ctx)` and mutate `node.text`, `node.before` or `node.
 - Open next / previous content node
 - Reveal active file in structure pane
 - New node in current container
+- Set status of current node
 
 ## Development
 

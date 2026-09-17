@@ -1,6 +1,7 @@
 import type { App } from "obsidian";
 import { join } from "../model/paths";
 import { SKIP_KEY } from "../model/serialize";
+import { computeEffectiveStatuses, statusById } from "../model/status";
 import type { Project, ProjectNode } from "../model/types";
 import { computeNumbering } from "./numbering";
 import type { CompileNode, Numbering } from "./types";
@@ -15,12 +16,13 @@ export interface BuiltTree {
 
 const EMPTY_NUMBERING: Numbering = { index: 0, number: 1, count: 1, absolute: 1, depth: 0, ancestors: [] };
 
-function makeNode(node: ProjectNode, path: string, title: string): CompileNode {
+function makeNode(node: ProjectNode, path: string, title: string, status: { id: string; name: string } | null): CompileNode {
 	return {
 		typeId: node.typeId,
 		kind: node.kind,
 		title,
 		path,
+		status,
 		frontmatter: {},
 		text: "",
 		before: [],
@@ -34,6 +36,12 @@ function makeNode(node: ProjectNode, path: string, title: string): CompileNode {
 export async function buildCompileTree(app: App, project: Project): Promise<BuiltTree> {
 	const skipped: string[] = [];
 	const missing: string[] = [];
+	const effective = computeEffectiveStatuses(project.root, project.statuses);
+	const statusOf = (node: ProjectNode): { id: string; name: string } | null => {
+		const id = effective.get(node.path)?.effective;
+		if (!id) return null;
+		return { id, name: statusById(project.statuses, id)?.name ?? id };
+	};
 
 	const build = async (node: ProjectNode): Promise<CompileNode | null> => {
 		const vaultPath = join(project.rootFolder, node.path);
@@ -48,13 +56,13 @@ export async function buildCompileTree(app: App, project: Project): Promise<Buil
 				skipped.push(vaultPath);
 				return null;
 			}
-			const out = makeNode(node, vaultPath, node.name);
+			const out = makeNode(node, vaultPath, node.name, statusOf(node));
 			out.frontmatter = { ...frontmatter };
 			out.text = await app.vault.cachedRead(file);
 			return out;
 		}
 		if (node.path !== "" && !app.vault.getFolderByPath(vaultPath)) missing.push(vaultPath);
-		const out = makeNode(node, vaultPath, node.path === "" ? project.title : node.name);
+		const out = makeNode(node, vaultPath, node.path === "" ? project.title : node.name, statusOf(node));
 		for (const child of node.children) {
 			const built = await build(child);
 			if (built) out.children.push(built);

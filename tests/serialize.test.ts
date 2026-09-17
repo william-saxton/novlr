@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { NOVEL_SCHEMA } from "../src/model/schema";
+import { DEFAULT_STATUSES } from "../src/model/status";
 import { parseProject, serializeProject } from "../src/model/serialize";
 
 const fm = {
@@ -69,7 +70,7 @@ describe("parseProject", () => {
 	it("round-trips through serializeProject", () => {
 		const { project } = parseProject("Books/The Hollow Road/novelr.md", fm);
 		const out = serializeProject(project!);
-		expect(out).toEqual(fm);
+		expect(out).toEqual({ ...fm, statuses: DEFAULT_STATUSES });
 	});
 
 	it("omits empty optional fields when serializing", () => {

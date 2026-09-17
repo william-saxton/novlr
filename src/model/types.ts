@@ -24,6 +24,19 @@ export interface SchemaPreset {
 	schema: Schema;
 }
 
+/** A user-defined status such as New, In progress or Done. */
+export interface StatusDef {
+	/** Slug matching ^[a-z][a-z0-9-]*$. */
+	id: string;
+	name: string;
+	/** One of the Obsidian accent colors; undefined = neutral. */
+	color?: string;
+	/** Status to push onto the containing node while this status is present; undefined = leave the parent unchanged. */
+	parent?: string;
+	/** Assigned to nodes when they are created. At most one status may be the default. */
+	default?: boolean;
+}
+
 export interface ProjectNode {
 	typeId: string;
 	/** Resolved from the schema at parse time; guessed for unknown types. Drives path derivation. */
@@ -32,11 +45,13 @@ export interface ProjectNode {
 	name: string;
 	/** Path relative to the project root folder; "" for the root. Content paths end in ".md". */
 	path: string;
+	/** Explicit status id, if set. */
+	status?: string;
 	/** Always empty for content nodes. */
 	children: ProjectNode[];
 }
 
-/** One entry of the serialized tree: `{ [typeId]: name, children?: TreeEntry[] }`. */
+/** One entry of the serialized tree: `{ [typeId]: name, status?: string, children?: TreeEntry[] }`. */
 export type TreeEntry = Record<string, string | TreeEntry[]>;
 
 /** Exactly what is persisted under the `novelr` frontmatter key. */
@@ -44,8 +59,11 @@ export interface ProjectFrontmatter {
 	version: 1;
 	title: string;
 	schema: Schema;
+	statuses: StatusDef[];
 	workflow?: string;
 	ignore?: string[];
+	/** Explicit status of the root node, if set. */
+	rootStatus?: string;
 	tree: TreeEntry[];
 }
 
@@ -55,6 +73,8 @@ export interface UnknownEntry {
 	isFolder: boolean;
 	/** From the file's `novelr-type` frontmatter, if any. */
 	guessedType?: string;
+	/** From the file's `novelr-status` frontmatter, if any. */
+	guessedStatus?: string;
 }
 
 /** Runtime project object held in the store. */
@@ -65,6 +85,7 @@ export interface Project {
 	rootFolder: string;
 	title: string;
 	schema: Schema;
+	statuses: StatusDef[];
 	/** typeId = schema.rootType, name = root folder basename, path = "". */
 	root: ProjectNode;
 	workflow: string | null;

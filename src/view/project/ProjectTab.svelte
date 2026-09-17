@@ -3,6 +3,7 @@
 	import { workflows } from "../../store/workflows";
 	import { getCallbacks } from "../context";
 	import SchemaEditor from "./SchemaEditor.svelte";
+	import StatusEditor from "./StatusEditor.svelte";
 
 	let { project }: { project: Project } = $props();
 	const callbacks = getCallbacks();
@@ -69,6 +70,8 @@
 	</div>
 
 	<SchemaEditor {project} />
+
+	<StatusEditor {project} />
 
 	<div class="novelr-field novelr-danger">
 		<div class="novelr-field-label">Danger zone</div>

@@ -114,6 +114,7 @@ export function cloneTree(node: ProjectNode): ProjectNode {
 		kind: node.kind,
 		name: node.name,
 		path: node.path,
+		...(node.status !== undefined ? { status: node.status } : {}),
 		children: node.children.map(cloneTree),
 	};
 }

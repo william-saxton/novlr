@@ -94,6 +94,8 @@ export function formatPlaceholders(
 					return node.title;
 				case "type":
 					return node.typeId;
+				case "status":
+					return node.status?.name ?? "";
 				case "number":
 					return applyModifier(node.numbering.number, modifier);
 				case "count":
@@ -118,6 +120,9 @@ export function formatPlaceholders(
 			let target: { title: string; number: number; absolute: number } | undefined;
 			if (head === "project") {
 				if (field === "title") return env.projectTitle;
+			} else if (head === "status") {
+				if (field === "id") return node.status?.id ?? "";
+				if (field === "name") return node.status?.name ?? "";
 			} else if (head === "parent") {
 				target = node.numbering.ancestors[node.numbering.ancestors.length - 1];
 			} else if (node.typeId === head) {

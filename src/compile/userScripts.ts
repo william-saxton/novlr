@@ -8,7 +8,7 @@ import type { CompileStep, StepDescription, StepOption } from "./types";
 /** Load problems keyed by script path, for the compile tab. */
 export const scriptErrors = writable<Map<string, string>>(new Map());
 
-const OPTION_TYPES = new Set(["boolean", "text", "multiline-text", "select", "node-types"]);
+const OPTION_TYPES = new Set(["boolean", "text", "multiline-text", "select", "node-types", "statuses"]);
 
 function isRecord(v: unknown): v is Record<string, unknown> {
 	return typeof v === "object" && v !== null;
@@ -32,8 +32,8 @@ export function stepFromExports(exports: unknown, canonicalID: string): CompileS
 	if (!isRecord(description)) throw new Error("Export a `description` object.");
 	if (typeof compile !== "function") throw new Error("Export a `compile` function.");
 	const kind = description["kind"];
-	if (kind !== "node" && kind !== "join" && kind !== "manuscript") {
-		throw new Error('description.kind must be "node", "join" or "manuscript".');
+	if (kind !== "node" && kind !== "tree" && kind !== "join" && kind !== "manuscript") {
+		throw new Error('description.kind must be "node", "tree", "join" or "manuscript".');
 	}
 	const rawOptions = Array.isArray(description["options"]) ? description["options"] : [];
 	const options: StepOption[] = [];

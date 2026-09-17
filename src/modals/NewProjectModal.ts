@@ -3,6 +3,7 @@ import type NovelrPlugin from "../main";
 import { join, validateName } from "../model/paths";
 import { BUILTIN_PRESETS, cloneSchema } from "../model/schema";
 import { FRONTMATTER_KEY, serializeProject } from "../model/serialize";
+import { DEFAULT_STATUSES, cloneStatuses } from "../model/status";
 import type { Project, SchemaPreset } from "../model/types";
 import { selectedIndexPath } from "../store/projects";
 import { FolderSuggest } from "./FolderSuggest";
@@ -128,6 +129,7 @@ export class NewProjectModal extends Modal {
 			rootFolder,
 			title,
 			schema: cloneSchema(preset.schema),
+			statuses: cloneStatuses(DEFAULT_STATUSES),
 			root: { typeId: preset.schema.rootType, kind: "container", name: title, path: "", children: [] },
 			workflow: null,
 			ignore: [],

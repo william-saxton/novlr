@@ -11,6 +11,7 @@
 	let descriptions = $derived(callbacks.listStepDescriptions());
 	let groups = $derived([
 		{ label: "Node steps", items: descriptions.filter((d) => d.kind === "node" && !d.isScript) },
+		{ label: "Structure steps", items: descriptions.filter((d) => d.kind === "tree" && !d.isScript) },
 		{ label: "Build", items: descriptions.filter((d) => d.kind === "join" && !d.isScript) },
 		{ label: "Manuscript steps", items: descriptions.filter((d) => d.kind === "manuscript" && !d.isScript) },
 		{ label: "Your scripts", items: descriptions.filter((d) => d.isScript) },
@@ -25,7 +26,7 @@
 		const step = newWorkflowStep(description);
 		// Put the new step in a sensible spot: node steps before the build step, manuscript steps after.
 		const joinIndex = workflow.steps.findIndex((s) => callbacks.stepDescription(s.id)?.kind === "join");
-		if (description.kind === "node" && joinIndex !== -1) workflow.steps.splice(joinIndex, 0, step);
+		if ((description.kind === "node" || description.kind === "tree") && joinIndex !== -1) workflow.steps.splice(joinIndex, 0, step);
 		else workflow.steps.push(step);
 		callbacks.workflowChanged();
 	}

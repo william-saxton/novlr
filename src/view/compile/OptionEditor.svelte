@@ -69,5 +69,24 @@
 			<NodeTypePicker {project} selected={Array.isArray(values[option.id]) ? (values[option.id] as string[]) : []} onchange={(next) => set(next)} />
 		</div>
 		<div class="novelr-muted">{option.description}</div>
+	{:else if option.type === "statuses"}
+		{@const selected = Array.isArray(values[option.id]) ? (values[option.id] as string[]) : []}
+		<div class="novelr-option-col">
+			<span class="novelr-option-name">{option.name}</span>
+			<div class="novelr-chips">
+				{#each project.statuses as s (s.id)}
+					<button
+						class="novelr-chip"
+						class:is-active={selected.includes(s.id)}
+						onclick={() => set(selected.includes(s.id) ? selected.filter((x) => x !== s.id) : [...selected, s.id])}
+					>
+						<span class="novelr-status-dot novelr-color-{s.color ?? 'none'}" class:is-unset={!s.color}></span>
+						{s.name}
+					</button>
+				{/each}
+				<button class="novelr-chip" class:is-active={selected.includes("")} onclick={() => set(selected.includes("") ? selected.filter((x) => x !== "") : [...selected, ""])}>No status</button>
+			</div>
+		</div>
+		<div class="novelr-muted">{option.description}</div>
 	{/if}
 </div>

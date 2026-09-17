@@ -6,6 +6,7 @@ export interface Spec {
 	type: string;
 	title: string;
 	text?: string;
+	status?: string;
 	children?: Spec[];
 }
 
@@ -17,6 +18,7 @@ function toNode(spec: Spec, parentPath: string): CompileNode {
 		kind,
 		title: spec.title,
 		path,
+		status: spec.status ? { id: spec.status, name: spec.status } : null,
 		frontmatter: {},
 		text: spec.text ?? "",
 		before: [],

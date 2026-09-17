@@ -1,4 +1,5 @@
 import type { CompileStep } from "../types";
+import { FilterStatusStep } from "./filterStatus";
 import { JoinTreeStep } from "./joinTree";
 import {
 	AddFrontmatterStep,
@@ -26,6 +27,7 @@ export const BUILTIN_STEPS: CompileStep[] = [
 	InsertAfterStep,
 	ReplaceTextStep,
 	TrimWhitespaceStep,
+	FilterStatusStep,
 	JoinTreeStep,
 	NormalizeBlankLinesStep,
 	FindReplaceStep,
