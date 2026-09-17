@@ -1,12 +1,14 @@
 import { Plugin, type WorkspaceLeaf } from "obsidian";
 import { NewProjectModal } from "./modals/NewProjectModal";
 import { DEFAULT_SETTINGS, NovelrSettingTab, type NovelrSettings } from "./settings";
+import { NodeOps } from "./vault/ops";
 import { ProjectManager } from "./vault/projectManager";
 import { NovelrView, VIEW_TYPE_NOVELR } from "./view/NovelrView";
 
 export default class NovelrPlugin extends Plugin {
 	override settings: NovelrSettings = DEFAULT_SETTINGS;
 	projectManager: ProjectManager = new ProjectManager(this);
+	ops: NodeOps = new NodeOps(this);
 
 	override async onload(): Promise<void> {
 		await this.loadSettings();

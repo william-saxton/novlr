@@ -3,14 +3,40 @@
 	import { collapsed, toggleCollapsed } from "../../store/ui";
 	import { icon } from "../../utils/icons";
 	import { getCallbacks } from "../context";
+	import { DragController, type DragIndicator } from "./dragController";
 	import { flatten } from "./flatten";
 	import TreeRow from "./TreeRow.svelte";
 	import UnknownFiles from "./UnknownFiles.svelte";
+
+	const INDENT_PX = 18;
+	const BASE_INDENT_PX = 8;
 
 	let { project }: { project: Project } = $props();
 	const callbacks = getCallbacks();
 
 	let rows = $derived(flatten(project, $collapsed));
+	let listEl: HTMLUListElement | undefined = $state();
+	let indicator: DragIndicator | null = $state(null);
+	let draggingPath: string | null = $state(null);
+
+	$effect(() => {
+		if (!listEl) return;
+		const controller = new DragController({
+			listEl,
+			rowSelector: ".novelr-row",
+			indentPx: INDENT_PX,
+			baseIndentPx: BASE_INDENT_PX,
+			getRows: () => rows,
+			getSchema: () => project.schema,
+			getRootTypeId: () => project.root.typeId,
+			onIndicator: (i) => (indicator = i),
+			onDragState: (path) => (draggingPath = path),
+			onDrop: (target, dragged) => {
+				callbacks.moveNode(project, dragged.node.path, target.parentPath, target.index);
+			},
+		});
+		return () => controller.destroy();
+	});
 </script>
 
 <div class="novelr-structure">
@@ -35,16 +61,26 @@
 	{#if rows.length === 0}
 		<div class="novelr-empty">
 			<p class="novelr-muted">This project has no nodes yet.</p>
+			<button onclick={() => callbacks.newNode(project, project.root)}>Add the first node</button>
 		</div>
 	{:else}
-		<ul class="novelr-tree" role="tree">
+		<ul class="novelr-tree" class:is-dragging={draggingPath !== null} role="tree" bind:this={listEl}>
 			{#each rows as row (row.node.path)}
 				<TreeRow
 					{row}
 					{project}
+					dragging={draggingPath === row.node.path}
 					ontoggle={() => toggleCollapsed(project.indexPath, row.node.path)}
 				/>
 			{/each}
+			{#if indicator}
+				<div
+					class="novelr-drop-indicator"
+					class:is-invalid={!indicator.valid}
+					style:top={`${indicator.top}px`}
+					style:--novelr-depth={indicator.depth}
+				></div>
+			{/if}
 		</ul>
 	{/if}
 

@@ -6,7 +6,12 @@
 	import { getCallbacks } from "../context";
 	import type { Row } from "./flatten";
 
-	let { row, project, ontoggle }: { row: Row; project: Project; ontoggle: () => void } = $props();
+	let {
+		row,
+		project,
+		dragging = false,
+		ontoggle,
+	}: { row: Row; project: Project; dragging?: boolean; ontoggle: () => void } = $props();
 	const callbacks = getCallbacks();
 
 	let vaultPath = $derived(join(project.rootFolder, row.node.path));
@@ -21,6 +26,16 @@
 		if (e.key === "Enter" || e.key === " ") {
 			e.preventDefault();
 			onClick();
+		} else if (e.key === "F2") {
+			e.preventDefault();
+			callbacks.renameNode(project, row.node);
+		} else if (e.key === "Delete" || e.key === "Backspace") {
+			e.preventDefault();
+			callbacks.deleteNode(project, row.node);
+		} else if (e.key === "ArrowLeft" && row.node.kind === "container" && !row.collapsed) {
+			ontoggle();
+		} else if (e.key === "ArrowRight" && row.node.kind === "container" && row.collapsed) {
+			ontoggle();
 		}
 	}
 </script>
@@ -31,6 +46,7 @@
 	class:is-missing={row.missing}
 	class:is-unknown-type={row.unknownType}
 	class:is-container={row.node.kind === "container"}
+	class:is-dragging={dragging}
 	style:--novelr-depth={row.depth}
 	role="treeitem"
 	aria-selected={isActive}
@@ -76,4 +92,13 @@
 		<span class="novelr-row-badge" title={`Unknown type "${row.node.typeId}"`} use:icon={"help-circle"}></span>
 	{/if}
 	<span class="novelr-row-type">{row.node.typeId}</span>
+	<button
+		class="clickable-icon novelr-icon-button novelr-row-more"
+		aria-label="More options"
+		use:icon={"more-horizontal"}
+		onclick={(e) => {
+			e.stopPropagation();
+			callbacks.showNodeMenu(project, row.node, e);
+		}}
+	></button>
 </li>

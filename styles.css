@@ -330,3 +330,69 @@
 .novelr-type-name {
 	font-weight: var(--font-medium);
 }
+
+/* Drag and drop */
+
+.novelr-tree {
+	position: relative;
+}
+
+.novelr-tree.is-dragging .novelr-row {
+	cursor: grabbing;
+}
+
+.novelr-row.is-dragging {
+	opacity: 0.4;
+}
+
+.novelr-row-more {
+	opacity: 0;
+	flex-shrink: 0;
+}
+
+.novelr-row:hover .novelr-row-more,
+.novelr-row:focus-within .novelr-row-more {
+	opacity: 1;
+}
+
+.novelr-drop-indicator {
+	position: absolute;
+	left: calc(var(--size-4-2) + 8px + var(--novelr-depth, 0) * 18px);
+	right: var(--size-4-2);
+	height: 2px;
+	margin-top: -1px;
+	background: var(--interactive-accent);
+	border-radius: 1px;
+	pointer-events: none;
+}
+
+.novelr-drop-indicator::before {
+	content: "";
+	position: absolute;
+	left: -4px;
+	top: -3px;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--interactive-accent);
+}
+
+.novelr-drop-indicator.is-invalid {
+	background: var(--text-error);
+}
+
+.novelr-drop-indicator.is-invalid::before {
+	background: var(--text-error);
+}
+
+/* Forms */
+
+.novelr-form-error {
+	color: var(--text-error);
+	font-size: var(--font-ui-small);
+	min-height: 1.4em;
+}
+
+.novelr-prompt-input {
+	width: 100%;
+}
