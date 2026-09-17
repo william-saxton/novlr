@@ -27,6 +27,8 @@ export interface NovelrSettings {
 	seededDefaults: boolean;
 	/** Collapsed containers in the structure pane (`indexPath::nodePath`). */
 	collapsed: string[];
+	/** User-added hex colors offered as status swatches in every project. */
+	customColors: string[];
 }
 
 export const DEFAULT_SETTINGS: NovelrSettings = {
@@ -39,6 +41,7 @@ export const DEFAULT_SETTINGS: NovelrSettings = {
 	confirmDelete: true,
 	seededDefaults: false,
 	collapsed: [],
+	customColors: [],
 };
 
 export class NovelrSettingTab extends PluginSettingTab {

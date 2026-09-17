@@ -163,6 +163,17 @@ export class NovelrView extends ItemView {
 			attachIconSuggest: (input, onPick) => {
 				new IconSuggest(this.app, input, onPick);
 			},
+			showMenu: (event, items) => {
+				const menu = new Menu();
+				for (const spec of items) {
+					menu.addItem((item) => {
+						item.setTitle(spec.title).onClick(spec.onClick);
+						if (spec.icon) item.setIcon(spec.icon);
+						if (spec.danger) item.setWarning(true);
+					});
+				}
+				menu.showAtMouseEvent(event);
+			},
 			showStatusMenu: (project, node, event) => {
 				const current = this.live(project) ?? project;
 				const menu = new Menu();

@@ -2,6 +2,7 @@
 	import { slugify } from "../../model/schema";
 	import { STATUS_COLORS, statusColorValue, validateStatuses } from "../../model/status";
 	import type { Project, StatusDef } from "../../model/types";
+	import { palette } from "../../store/workflows";
 	import { deepEqual } from "../../utils/deepEqual";
 	import { icon } from "../../utils/icons";
 	import { getCallbacks } from "../context";
@@ -91,18 +92,61 @@
 		if (callbacks.setStatuses(project, statuses, renames).length === 0) seededFrom = null;
 	}
 
-	/** Hex colors already used by any status in this project, offered as extra swatches. */
-	let customColors = $derived(
-		[...new Set(draft.map((d) => d.color).filter((c): c is string => !!c && c.startsWith("#")))],
-	);
+	// ---- custom colors ------------------------------------------------------
 
-	/** Value for the native color input; named colors have no fixed hex, so fall back to grey. */
-	function hexOf(color: string | undefined): string {
-		return color && color.startsWith("#") && (color.length === 7 || color.length === 4) ? expandHex(color) : "#888888";
+	/** One hidden native color input shared by every picker interaction. */
+	let colorInput: HTMLInputElement | undefined = $state();
+	let onColorInput: (hex: string) => void = () => {};
+	let onColorChange: (hex: string) => void = () => {};
+
+	function openPicker(initial: string, live: (hex: string) => void, done: (hex: string) => void): void {
+		if (!colorInput) return;
+		onColorInput = live;
+		onColorChange = done;
+		colorInput.value = initial;
+		colorInput.click();
 	}
 
-	function expandHex(c: string): string {
-		return c.length === 4 ? `#${c[1]}${c[1]}${c[2]}${c[2]}${c[3]}${c[3]}` : c;
+	function addColor(d: Draft): void {
+		openPicker(
+			hexOf(d.color),
+			(hex) => (d.color = hex),
+			(hex) => {
+				d.color = hex;
+				if (!$palette.includes(hex)) palette.update((list) => [...list, hex]);
+			},
+		);
+	}
+
+	function editColor(old: string): void {
+		openPicker(
+			old,
+			(hex) => {
+				for (const d of draft) if (d.color === old) d.color = hex;
+			},
+			(hex) => {
+				for (const d of draft) if (d.color === old) d.color = hex;
+				palette.update((list) => list.map((c) => (c === old ? hex : c)).filter((c, i, a) => a.indexOf(c) === i));
+			},
+		);
+	}
+
+	function removeColor(c: string): void {
+		palette.update((list) => list.filter((x) => x !== c));
+		for (const d of draft) if (d.color === c) delete d.color;
+	}
+
+	function swatchMenu(e: MouseEvent, c: string): void {
+		e.preventDefault();
+		callbacks.showMenu(e, [
+			{ title: "Edit color…", icon: "palette", onClick: () => editColor(c) },
+			{ title: "Remove color", icon: "trash", danger: true, onClick: () => removeColor(c) },
+		]);
+	}
+
+	function hexOf(color: string | undefined): string {
+		if (!color || !color.startsWith("#")) return "#888888";
+		return color.length === 4 ? `#${color[1]}${color[1]}${color[2]}${color[2]}${color[3]}${color[3]}` : color.slice(0, 7);
 	}
 </script>
 
@@ -112,6 +156,16 @@
 		<span class="novelr-field-label novelr-inline-label">Statuses</span>
 		<span class="novelr-count">{project.statuses.length}</span>
 	</button>
+
+	<input
+		type="color"
+		class="novelr-hidden-color-input"
+		aria-hidden="true"
+		tabindex="-1"
+		bind:this={colorInput}
+		oninput={(e) => onColorInput((e.currentTarget as HTMLInputElement).value)}
+		onchange={(e) => onColorChange((e.currentTarget as HTMLInputElement).value)}
+	/>
 
 	{#if open}
 		<div class="novelr-schema-body">
@@ -150,24 +204,24 @@
 												class:is-active={d.color === c}
 												style:--novelr-status-color={statusColorValue(c)}
 												aria-label={c}
-												title={c}
+												title="{c} (follows the theme)"
 												onclick={() => (d.color = c)}
 											></button>
 										{/each}
-										{#each customColors as c (c)}
+										{#each $palette as c (c)}
 											<button
 												class="novelr-chip-color"
 												class:is-active={d.color === c}
 												style:--novelr-status-color={c}
 												aria-label={c}
-												title={c}
+												title="{c} (right-click to edit or remove)"
 												onclick={() => (d.color = c)}
+												oncontextmenu={(e) => swatchMenu(e, c)}
 											></button>
 										{/each}
-										<label class="novelr-color-input" title="Pick any color">
-											<input type="color" value={hexOf(d.color)} oninput={(e) => (d.color = (e.currentTarget as HTMLInputElement).value)} />
-											<span class="novelr-row-icon" use:icon={"palette"}></span>
-										</label>
+										<button class="novelr-color-add" aria-label="Add a color" title="Pick a new color" onclick={() => addColor(d)}>
+											<span use:icon={"plus"}></span>
+										</button>
 									</div>
 								</div>
 								<label class="novelr-form-row">

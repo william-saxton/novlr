@@ -2,6 +2,13 @@ import { getContext } from "svelte";
 import type { ProgressCallback, RunResult, StepDescription, ValidationResult, Workflow } from "../compile/types";
 import type { Project, ProjectNode, Schema, SchemaPreset, StatusDef, UnknownEntry } from "../model/types";
 
+export interface MenuItemSpec {
+	title: string;
+	icon?: string;
+	danger?: boolean;
+	onClick: () => void;
+}
+
 /**
  * Imperative operations the Svelte tree needs but must not perform itself.
  * Implemented by NovelrView so components never import `obsidian`.
@@ -22,6 +29,8 @@ export interface ViewCallbacks {
 	showStatusMenu(project: Project, node: ProjectNode, event: MouseEvent): void;
 	/** Attach an icon-id autocomplete to a text input. */
 	attachIconSuggest(input: HTMLInputElement, onPick: (id: string) => void): void;
+	/** Show a native context menu at the mouse position. */
+	showMenu(event: MouseEvent, items: MenuItemSpec[]): void;
 	/** Returns validation errors; applies when empty. */
 	setStatuses(project: Project, statuses: StatusDef[], renames: Record<string, string>): string[];
 	// Project

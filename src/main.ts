@@ -10,7 +10,7 @@ import type { Project, ProjectNode } from "./model/types";
 import { DEFAULT_SETTINGS, NovelrSettingTab, type NovelrSettings } from "./settings";
 import { currentProject, projectContaining, selectedIndexPath } from "./store/projects";
 import { activeTab, collapsed, revealPath } from "./store/ui";
-import { presets, workflows } from "./store/workflows";
+import { palette, presets, workflows } from "./store/workflows";
 import { debounce } from "./utils/debounce";
 import { NodeOps } from "./vault/ops";
 import { ProjectManager } from "./vault/projectManager";
@@ -63,6 +63,13 @@ export default class NovelrPlugin extends Plugin {
 		this.register(
 			presets.subscribe((list) => {
 				this.settings.presets = list;
+				if (this.loaded) persist();
+			}),
+		);
+		palette.set(this.settings.customColors);
+		this.register(
+			palette.subscribe((list) => {
+				this.settings.customColors = list;
 				if (this.loaded) persist();
 			}),
 		);

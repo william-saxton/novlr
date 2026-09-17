@@ -10,6 +10,9 @@ export const workflows = writable<Workflow[]>([]);
 /** User-saved schema presets; mirrored into plugin settings by main.ts. */
 export const presets = writable<SchemaPreset[]>([]);
 
+/** User-added hex colors for statuses; mirrored into plugin settings by main.ts. */
+export const palette = writable<string[]>([]);
+
 function bump(): void {
 	workflows.update((list) => [...list]);
 }

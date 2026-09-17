@@ -69,6 +69,8 @@ Every node can carry a status such as New, In progress or Done. Statuses are def
 
 Pushing works all the way up. With the defaults, a chapter marked Done that gains a New scene shows In progress (hollow dot, tooltip says why), and so does the novel above it. When the scene is finished, the chapter shows Done again. If several children push different statuses, the one listed first wins, so order the list from "most attention needed" down.
 
+Colors are the eight theme accent colors or any hex value: the plus swatch opens a color picker, and custom colors are kept in a vault-wide palette (right-click a custom swatch to edit or remove it).
+
 Click a node's dot, right-click and choose **Set status…**, or run **Novelr: Set status of current node**. Content notes also get a `novelr-status` property when "Write node type and status to files" is on.
 
 ```yaml
