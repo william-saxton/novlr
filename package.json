@@ -1,6 +1,6 @@
 {
 	"name": "novelr",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Obsidian plugin for long-form writing with user-defined structure and a type-aware compile pipeline.",
 	"main": "main.js",
 	"type": "module",
