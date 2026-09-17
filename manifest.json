@@ -1,0 +1,10 @@
+{
+	"id": "novelr",
+	"name": "Novelr",
+	"version": "0.1.0",
+	"minAppVersion": "1.7.2",
+	"description": "Long-form writing with user-defined structure (novel, chapter, scene, or anything you like) and a type-aware compile pipeline.",
+	"author": "William Kepppys",
+	"authorUrl": "",
+	"isDesktopOnly": false
+}

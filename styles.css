@@ -1,0 +1,26 @@
+/* Novelr plugin styles. All classes are prefixed with novelr- and use Obsidian CSS variables. */
+
+.novelr-view {
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+}
+
+.novelr-app {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	min-height: 0;
+}
+
+.novelr-empty {
+	padding: var(--size-4-4);
+	text-align: center;
+	color: var(--text-muted);
+}
+
+.novelr-muted {
+	color: var(--text-faint);
+	font-size: var(--font-ui-small);
+}
