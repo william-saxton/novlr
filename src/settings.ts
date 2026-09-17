@@ -18,6 +18,8 @@ export interface NovelrSettings {
 	writeNodeType: boolean;
 	/** Ask before trashing nodes. */
 	confirmDelete: boolean;
+	/** Set once the built-in workflows have been copied into `workflows`. */
+	seededDefaults: boolean;
 }
 
 export const DEFAULT_SETTINGS: NovelrSettings = {
@@ -28,6 +30,7 @@ export const DEFAULT_SETTINGS: NovelrSettings = {
 	indexNoteName: "novelr",
 	writeNodeType: true,
 	confirmDelete: true,
+	seededDefaults: false,
 };
 
 export class NovelrSettingTab extends PluginSettingTab {

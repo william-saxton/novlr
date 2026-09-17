@@ -144,6 +144,30 @@ export class NovelrView extends ItemView {
 				this.remember(current);
 				this.ops.removeMissing(current, path);
 			},
+			openPath: (path) => {
+				const file = this.app.vault.getFileByPath(path);
+				if (file) void this.app.workspace.getLeaf(false).openFile(file);
+				else new Notice(`${path} was not found.`);
+			},
+			listWorkflows: () => this.plugin.compiler.workflows(),
+			setWorkflow: (project, name) => {
+				const current = this.live(project) ?? project;
+				this.ops.setWorkflow(current, name);
+			},
+			validateWorkflow: (project, name) => {
+				const workflow = this.plugin.compiler.findWorkflow(name);
+				if (!workflow) return { errors: [`Workflow "${name}" does not exist.`], warnings: [] };
+				return this.plugin.compiler.validate(project, workflow);
+			},
+			compile: async (project, name, onProgress) => {
+				const current = this.live(project) ?? project;
+				const workflow = this.plugin.compiler.findWorkflow(name);
+				if (!workflow) return { ok: false, log: [], error: `Workflow "${name}" does not exist.`, outputs: {} };
+				return this.plugin.compiler.compile(current, workflow, onProgress);
+			},
+			editWorkflows: () => {
+				new Notice("Workflow editing is coming in the next milestone. Edit workflows in the plugin settings for now.");
+			},
 		};
 	}
 

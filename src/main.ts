@@ -1,6 +1,10 @@
-import { Plugin, type WorkspaceLeaf } from "obsidian";
+import { Notice, Plugin, type WorkspaceLeaf } from "obsidian";
+import { get } from "svelte/store";
+import { CompileService } from "./compile/service";
+import { DEFAULT_WORKFLOWS, cloneWorkflow } from "./compile/workflows";
 import { NewProjectModal } from "./modals/NewProjectModal";
 import { DEFAULT_SETTINGS, NovelrSettingTab, type NovelrSettings } from "./settings";
+import { currentProject, projectContaining } from "./store/projects";
 import { NodeOps } from "./vault/ops";
 import { ProjectManager } from "./vault/projectManager";
 import { NovelrView, VIEW_TYPE_NOVELR } from "./view/NovelrView";
@@ -9,6 +13,7 @@ export default class NovelrPlugin extends Plugin {
 	override settings: NovelrSettings = DEFAULT_SETTINGS;
 	projectManager: ProjectManager = new ProjectManager(this);
 	ops: NodeOps = new NodeOps(this);
+	compiler: CompileService = new CompileService(this);
 
 	override async onload(): Promise<void> {
 		await this.loadSettings();
@@ -35,6 +40,17 @@ export default class NovelrPlugin extends Plugin {
 			},
 		});
 
+		this.addCommand({
+			id: "compile",
+			name: "Compile current project",
+			checkCallback: (checking) => {
+				const project = this.activeProject();
+				if (!project) return false;
+				if (!checking) void this.compiler.compileProject(project);
+				return true;
+			},
+		});
+
 		this.addSettingTab(new NovelrSettingTab(this.app, this));
 
 		this.app.workspace.onLayoutReady(() => {
@@ -44,6 +60,12 @@ export default class NovelrPlugin extends Plugin {
 
 	override onunload(): void {
 		void this.projectManager.flush();
+	}
+
+	/** The project of the active file, else the one selected in the pane. */
+	activeProject() {
+		const active = this.app.workspace.getActiveFile();
+		return (active ? projectContaining(active.path) : undefined) ?? get(currentProject) ?? undefined;
 	}
 
 	async activateView(): Promise<void> {
@@ -60,9 +82,19 @@ export default class NovelrPlugin extends Plugin {
 	async loadSettings(): Promise<void> {
 		const stored = (await this.loadData()) as Partial<NovelrSettings> | null;
 		this.settings = { ...DEFAULT_SETTINGS, ...(stored ?? {}) };
+		if (!this.settings.seededDefaults) {
+			const existing = new Set(this.settings.workflows.map((w) => w.name));
+			for (const w of DEFAULT_WORKFLOWS) if (!existing.has(w.name)) this.settings.workflows.push(cloneWorkflow(w));
+			this.settings.seededDefaults = true;
+			await this.saveSettings();
+		}
 	}
 
 	async saveSettings(): Promise<void> {
 		await this.saveData(this.settings);
+	}
+
+	notice(message: string): void {
+		new Notice(message);
 	}
 }

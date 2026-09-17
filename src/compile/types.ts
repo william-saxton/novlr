@@ -5,6 +5,7 @@ export interface Ancestor {
 	typeId: string;
 	title: string;
 	number: number;
+	absolute: number;
 }
 
 export interface Numbering {
@@ -12,6 +13,8 @@ export interface Numbering {
 	index: number;
 	/** 1-based position among siblings of the same type. */
 	number: number;
+	/** Total siblings of the same type (including this node). */
+	count: number;
 	/** 1-based count of this type across the whole project in document order. */
 	absolute: number;
 	/** Root = 0. */
@@ -64,6 +67,13 @@ export interface StepDescription {
 	options: StepOption[];
 }
 
+export interface FormatEnv {
+	projectTitle: string;
+	pageBreak: string;
+	/** ISO date; defaults to today. */
+	date?: string;
+}
+
 export interface CompileContext {
 	app: App;
 	project: Project;
@@ -74,6 +84,8 @@ export interface CompileContext {
 	/** Placeholder expansion for the given node. */
 	format: (fmt: string, node: CompileNode) => string;
 	log: (message: string) => void;
+	/** Shared across steps in one run; e.g. write-to-note records `writtenPath`. */
+	outputs: Record<string, string>;
 }
 
 export type NodeCompile = (node: CompileNode, ctx: CompileContext) => void | Promise<void>;
@@ -100,3 +112,35 @@ export interface Workflow {
 
 /** Implicit option id for node-step targeting. */
 export const TARGETS_OPTION_ID = "targets";
+
+export const TARGETS_OPTION: StepOption = {
+	id: TARGETS_OPTION_ID,
+	name: "Apply to",
+	description: "Node types this step runs on. Empty means every node.",
+	type: "node-types",
+	default: [],
+};
+
+export interface ValidationResult {
+	errors: string[];
+	warnings: string[];
+}
+
+export interface RunLogEntry {
+	stepIndex: number;
+	name: string;
+	ms: number;
+	messages: string[];
+}
+
+export interface RunResult {
+	ok: boolean;
+	log: RunLogEntry[];
+	/** Final manuscript text, when the run reached the join step. */
+	output?: string;
+	error?: string;
+	failedStep?: number;
+	outputs: Record<string, string>;
+}
+
+export type ProgressCallback = (stepIndex: number, total: number, name: string) => void;

@@ -38,7 +38,8 @@ class ConfirmModal extends Modal {
 				button.setButtonText(this.options.confirmText ?? "Confirm").onClick(() => {
 					this.finish(true);
 				});
-				if (this.options.danger) button.setWarning();
+				// setDestructive() needs Obsidian 1.13; the class is what older versions' setWarning() applied.
+				if (this.options.danger) button.buttonEl.addClass("mod-warning");
 				else button.setCta();
 			});
 		this.scope.register([], "Enter", () => {

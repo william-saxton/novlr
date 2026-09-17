@@ -1,4 +1,5 @@
 import { getContext } from "svelte";
+import type { ProgressCallback, RunResult, ValidationResult, Workflow } from "../compile/types";
 import type { Project, ProjectNode, UnknownEntry } from "../model/types";
 
 /**
@@ -8,6 +9,7 @@ import type { Project, ProjectNode, UnknownEntry } from "../model/types";
 export interface ViewCallbacks {
 	openNode(project: Project, node: ProjectNode): void;
 	openIndex(project: Project): void;
+	openPath(path: string): void;
 	newProject(): void;
 	newNode(project: Project, parent: ProjectNode): void;
 	renameNode(project: Project, node: ProjectNode): void;
@@ -17,6 +19,12 @@ export interface ViewCallbacks {
 	addUnknown(project: Project, entry: UnknownEntry): void;
 	ignoreUnknown(project: Project, entry: UnknownEntry): void;
 	removeMissing(project: Project, path: string): void;
+	// Compile
+	listWorkflows(): Workflow[];
+	setWorkflow(project: Project, name: string | null): void;
+	validateWorkflow(project: Project, name: string): ValidationResult;
+	compile(project: Project, name: string, onProgress?: ProgressCallback): Promise<RunResult>;
+	editWorkflows(project: Project): void;
 }
 
 export const CALLBACKS_KEY = Symbol("novelr-callbacks");

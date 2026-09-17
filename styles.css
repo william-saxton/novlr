@@ -396,3 +396,65 @@
 .novelr-prompt-input {
 	width: 100%;
 }
+
+/* Compile tab */
+
+.novelr-compile {
+	padding: var(--size-4-3);
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-3);
+}
+
+.novelr-inline {
+	display: flex;
+	align-items: center;
+	gap: var(--size-2-2);
+}
+
+.novelr-grow {
+	flex: 1;
+	min-width: 0;
+}
+
+.novelr-callout-error {
+	background: rgba(var(--color-red-rgb), 0.1);
+	color: var(--text-normal);
+}
+
+.novelr-result {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	padding: var(--size-4-2);
+	font-size: var(--font-ui-small);
+}
+
+.novelr-result.is-error {
+	border-color: var(--text-error);
+}
+
+.novelr-log {
+	list-style: none;
+	margin: var(--size-4-2) 0 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-2-1);
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
+.novelr-log li.is-failed {
+	color: var(--text-error);
+}
+
+.novelr-log .novelr-row-type {
+	opacity: 1;
+	margin-left: var(--size-2-2);
+}
+
+.novelr-log-messages {
+	color: var(--text-faint);
+	padding-left: var(--size-4-3);
+	word-break: break-word;
+}
