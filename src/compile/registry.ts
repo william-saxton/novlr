@@ -28,7 +28,7 @@ export class StepRegistry {
 		return this.all().filter((s) => s.description.kind === kind);
 	}
 
-	scripts(): CompileStep[] {
-		return this.all().filter((s) => s.description.isScript);
+	external(): CompileStep[] {
+		return this.all().filter((s) => s.description.external);
 	}
 }

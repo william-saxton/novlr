@@ -10,7 +10,7 @@ export const WriteToNoteStep: CompileStep = {
 		name: "Save as note",
 		description: "Writes the manuscript to a note in the vault.",
 		kind: "manuscript",
-		isScript: false,
+		external: false,
 		options: [
 			{
 				id: "path",

@@ -1,7 +1,6 @@
 <script lang="ts">
 	import type { Project } from "../../model/types";
 	import { collapsed, revealPath, toggleCollapsed } from "../../store/ui";
-	import { scriptErrors } from "../../compile/userScripts";
 	import { icon } from "../../utils/icons";
 	import { getCallbacks } from "../context";
 	import { DragController, type DragIndicator } from "./dragController";
@@ -67,13 +66,6 @@
 		<div class="novelr-callout novelr-callout-warning">
 			{#each project.warnings as warning, i (i)}
 				<div>{warning}</div>
-			{/each}
-		</div>
-	{/if}
-	{#if $scriptErrors.size > 0}
-		<div class="novelr-callout novelr-callout-error">
-			{#each [...$scriptErrors] as [path, message] (path)}
-				<div>{path}: {message}</div>
 			{/each}
 		</div>
 	{/if}

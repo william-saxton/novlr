@@ -12,7 +12,7 @@ export const StripFrontmatterStep: CompileStep = {
 		name: "Strip frontmatter",
 		description: "Removes the YAML properties block at the top of each note.",
 		kind: "node",
-		isScript: false,
+		external: false,
 		options: [],
 	},
 	compile(node: CompileNode) {
@@ -59,7 +59,7 @@ export const RemoveLinksStep: CompileStep = {
 		name: "Remove links",
 		description: "Turns wikilinks and markdown links into plain text and drops embeds.",
 		kind: "node",
-		isScript: false,
+		external: false,
 		options: [
 			{
 				id: "wiki",
@@ -120,7 +120,7 @@ export const RemoveCommentsStep: CompileStep = {
 		name: "Remove comments",
 		description: "Removes %% markdown %% and <!-- HTML --> comments.",
 		kind: "node",
-		isScript: false,
+		external: false,
 		options: [
 			{ id: "markdown", name: "Markdown comments", description: "Remove %% comments %%.", type: "boolean", default: true },
 			{ id: "html", name: "HTML comments", description: "Remove <!-- comments -->.", type: "boolean", default: true },
@@ -142,7 +142,7 @@ export const RemoveStrikethroughsStep: CompileStep = {
 		name: "Remove strikethroughs",
 		description: "Deletes ~~struck through~~ text.",
 		kind: "node",
-		isScript: false,
+		external: false,
 		options: [],
 	},
 	compile(node: CompileNode) {
@@ -164,7 +164,7 @@ export const TrimWhitespaceStep: CompileStep = {
 		name: "Trim whitespace",
 		description: "Removes trailing spaces on each line and blank lines at the start and end.",
 		kind: "node",
-		isScript: false,
+		external: false,
 		options: [],
 	},
 	compile(node: CompileNode) {
@@ -205,7 +205,7 @@ export const RemoveHeadingsStep: CompileStep = {
 		name: "Remove headings",
 		description: "Strips markdown headings, for example the scene title at the top of each scene.",
 		kind: "node",
-		isScript: false,
+		external: false,
 		options: [
 			{
 				id: "mode",
@@ -235,7 +235,7 @@ export const InsertBeforeStep: CompileStep = {
 		name: "Insert before",
 		description: "Adds text above each targeted node. Supports placeholders such as {title} and {number}.",
 		kind: "node",
-		isScript: false,
+		external: false,
 		options: [
 			{ id: "text", name: "Text", description: "Inserted above the node. Use ---- for a horizontal rule.", type: "multiline-text", default: "# {title}", placeholders: true },
 			{ id: "skipFirst", name: "Skip the first", description: "Do not insert before the first node of this type among its siblings (useful for separators).", type: "boolean", default: false },
@@ -253,7 +253,7 @@ export const InsertAfterStep: CompileStep = {
 		name: "Insert after",
 		description: "Adds text below each targeted node. Supports placeholders such as {title} and {number}.",
 		kind: "node",
-		isScript: false,
+		external: false,
 		options: [
 			{ id: "text", name: "Text", description: "Inserted below the node. Use ---- for a horizontal rule.", type: "multiline-text", default: "----", placeholders: true },
 			{ id: "skipLast", name: "Skip the last", description: "Do not insert after the last node of this type among its siblings.", type: "boolean", default: false },
@@ -290,7 +290,7 @@ export const ReplaceTextStep: CompileStep = {
 		name: "Find and replace",
 		description: "Replaces text in each targeted node.",
 		kind: "node",
-		isScript: false,
+		external: false,
 		options: [...REPLACE_OPTIONS],
 	},
 	compile(node: CompileNode, ctx: CompileContext) {
@@ -311,7 +311,7 @@ export const FindReplaceStep: CompileStep = {
 		name: "Find and replace",
 		description: "Replaces text across the whole manuscript.",
 		kind: "manuscript",
-		isScript: false,
+		external: false,
 		options: [...REPLACE_OPTIONS],
 	},
 	compile(text: string, ctx: CompileContext) {
@@ -336,7 +336,7 @@ export const NormalizeBlankLinesStep: CompileStep = {
 		name: "Normalize blank lines",
 		description: "Collapses runs of blank lines.",
 		kind: "manuscript",
-		isScript: false,
+		external: false,
 		options: [{ id: "max", name: "Maximum blank lines", description: "Longest run of blank lines to keep.", type: "text", default: "1" }],
 	},
 	compile(text: string, ctx: CompileContext) {
@@ -351,7 +351,7 @@ export const AddFrontmatterStep: CompileStep = {
 		name: "Add frontmatter",
 		description: "Prepends a YAML properties block to the manuscript.",
 		kind: "manuscript",
-		isScript: false,
+		external: false,
 		options: [{ id: "yaml", name: "Properties", description: "YAML, one key per line.", type: "multiline-text", default: "title: {project.title}", placeholders: true }],
 	},
 	compile(text: string, ctx: CompileContext) {

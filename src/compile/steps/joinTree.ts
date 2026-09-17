@@ -20,7 +20,7 @@ export const JoinTreeStep: CompileStep = {
 		name: "Build manuscript",
 		description: "Flattens the structure into a single text, in order, including any inserted text.",
 		kind: "join",
-		isScript: false,
+		external: false,
 		options: [
 			{ id: "joiner", name: "Separator", description: "Placed between consecutive pieces of text. Default is one blank line.", type: "text", default: "\\n\\n" },
 		],

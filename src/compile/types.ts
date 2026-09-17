@@ -64,12 +64,13 @@ export type StepOption =
 	| (OptionBase & { type: "statuses"; default: string[] });
 
 export interface StepDescription {
-	/** Built-ins use a plain slug; user scripts use "user:<basename>". */
+	/** Built-ins use a plain slug; steps from other plugins should prefix theirs with the plugin id. */
 	canonicalID: string;
 	name: string;
 	description: string;
 	kind: StepKind;
-	isScript: boolean;
+	/** True for steps registered by other plugins through the Novelr API. */
+	external: boolean;
 	/** For node steps the runner prepends the implicit `targets` node-types option. */
 	options: StepOption[];
 }
@@ -83,8 +84,6 @@ export interface FormatEnv {
 
 export interface CompileContext {
 	app: App;
-	/** The `obsidian` module (Notice, normalizePath, ...) for user scripts, which cannot import it. */
-	obsidian: typeof import("obsidian");
 	project: Project;
 	/** Read-only view of the whole tree. */
 	root: CompileNode;

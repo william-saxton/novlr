@@ -1,7 +1,7 @@
 import { type App, FuzzySuggestModal, Notice, Plugin, type WorkspaceLeaf } from "obsidian";
 import { get } from "svelte/store";
 import { CompileService } from "./compile/service";
-import { UserScriptLoader } from "./compile/userScripts";
+import { NovelrAPI } from "./api";
 import { DEFAULT_WORKFLOWS, cloneWorkflow } from "./compile/workflows";
 import { NewProjectModal } from "./modals/NewProjectModal";
 import { dirname, relativeTo } from "./model/paths";
@@ -21,7 +21,8 @@ export default class NovelrPlugin extends Plugin {
 	projectManager: ProjectManager = new ProjectManager(this);
 	ops: NodeOps = new NodeOps(this);
 	compiler: CompileService = new CompileService(this);
-	scripts: UserScriptLoader = new UserScriptLoader(this, this.compiler.registry);
+	/** Public API for other plugins; see src/api.ts. */
+	api: NovelrAPI = new NovelrAPI(this);
 	private loaded = false;
 
 	override async onload(): Promise<void> {
@@ -39,7 +40,6 @@ export default class NovelrPlugin extends Plugin {
 
 		this.app.workspace.onLayoutReady(() => {
 			this.projectManager.start();
-			this.scripts.start();
 		});
 	}
 

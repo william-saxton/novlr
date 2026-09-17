@@ -126,25 +126,36 @@ Node and structure steps come first, then one build step, then manuscript steps.
 | `{BR}` `{PB}` | line break, page break (configurable in settings) |
 | `----` | as the whole value, a horizontal rule |
 
-### User scripts
+### Steps from other plugins
 
-Point **User script folder** in settings at a vault folder. Every `.js` file there becomes a step and reloads when saved:
+Novelr does not load or evaluate script files. Other plugins (including a small personal one) can register compile steps through the public API instead:
 
-```js
-export default {
+```ts
+// In another plugin, after Novelr has loaded:
+const novelr = this.app.plugins.plugins["novelr"];
+novelr?.api.registerStep({
   description: {
+    canonicalID: "my-plugin:shout",   // prefix with your plugin id
     name: "Shout",
-    description: "Uppercases every scene.",
-    kind: "node", // "node" | "tree" | "join" | "manuscript"
-    options: [{ id: "suffix", name: "Suffix", type: "text", default: "!" }],
+    description: "Uppercases every targeted node.",
+    kind: "node",                     // "node" | "tree" | "join" | "manuscript"
+    external: true,
+    options: [{ id: "suffix", name: "Suffix", description: "", type: "text", default: "!" }],
   },
   compile(node, ctx) {
-    node.text = node.text.toUpperCase() + ctx.options.suffix;
+    if (node.kind === "content") node.text = node.text.toUpperCase() + String(ctx.options.suffix);
   },
-};
+});
+// and in onunload: novelr?.api.unregisterStep("my-plugin:shout");
 ```
 
-Scripts are ES modules (`export default { description, compile }`, or named `description` and `compile` exports) loaded by the browser's module loader, not evaluated as text. Node steps receive `(node, ctx)` and mutate `node.text`, `node.before` or `node.after`. Tree steps receive `(root, ctx)` and may prune or reorder `children`. Build steps receive `(root, ctx)` and return a string. Manuscript steps receive `(text, ctx)` and return a string. `ctx.format(fmt, node)` expands placeholders, `ctx.app` is the Obsidian app, and `ctx.obsidian` is the `obsidian` module (for `Notice`, `normalizePath` and friends).
+Registered steps appear under "From other plugins" in the workflow editor. Node steps receive `(node, ctx)` and mutate `node.text`, `node.before` or `node.after`. Tree steps receive `(root, ctx)` and may prune or reorder `children`. Build steps receive `(root, ctx)` and return a string. Manuscript steps receive `(text, ctx)` and return a string. `ctx.format(fmt, node)` expands placeholders and `ctx.app` is the Obsidian app.
+
+## What Novelr touches
+
+- On startup it checks the cached frontmatter of every Markdown note once to find index notes (the ones with a `novelr` property). It does not read file contents to do this.
+- It only reads and writes notes inside project folders: the index note, content nodes, and the manuscript written by a compile step.
+- It never runs code from your vault and never touches the clipboard or the network.
 
 ## Commands
 

@@ -123,7 +123,7 @@ describe("runWorkflow", () => {
 
 	it("reports a failing step", async () => {
 		const boom: CompileStep = {
-			description: { canonicalID: "boom", name: "Boom", description: "", kind: "manuscript", isScript: false, options: [] },
+			description: { canonicalID: "boom", name: "Boom", description: "", kind: "manuscript", external: false, options: [] },
 			compile: () => {
 				throw new Error("kaboom");
 			},

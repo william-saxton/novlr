@@ -61,8 +61,6 @@ export function validateWorkflow(workflow: Workflow, registry: StepRegistry, sch
 
 export interface RunParams {
 	app: App;
-	/** Passed through to `ctx.obsidian`; tests may omit it. */
-	obsidian?: typeof import("obsidian");
 	project: Project;
 	root: CompileNode;
 	workflow: Workflow;
@@ -73,7 +71,6 @@ export interface RunParams {
 
 export async function runWorkflow(params: RunParams): Promise<RunResult> {
 	const { app, project, root, workflow, registry, env, onProgress } = params;
-	const obsidianModule = params.obsidian ?? ({} as typeof import("obsidian"));
 	const result: RunResult = { ok: true, log: [], outputs: {} };
 	let manuscript: string | null = null;
 
@@ -98,7 +95,6 @@ export async function runWorkflow(params: RunParams): Promise<RunResult> {
 		const options = withDefaults(step.description, ws.optionValues);
 		const ctx: CompileContext = {
 			app,
-			obsidian: obsidianModule,
 			project,
 			root,
 			options,

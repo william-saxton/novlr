@@ -1,4 +1,3 @@
-import * as obsidian from "obsidian";
 import { Notice } from "obsidian";
 import { get } from "svelte/store";
 import type NovelrPlugin from "../main";
@@ -37,7 +36,6 @@ export class CompileService {
 		const { root, skipped, missing } = await buildCompileTree(this.plugin.app, project);
 		const result = await runWorkflow({
 			app: this.plugin.app,
-			obsidian,
 			project,
 			root,
 			workflow,

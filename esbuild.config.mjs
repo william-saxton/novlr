@@ -57,9 +57,6 @@ const context = await esbuild.context({
 	minify: prod,
 	outfile: "main.js",
 	conditions: ["svelte", "browser"],
-	// Keep `import(url)` as a real dynamic import (user scripts load from blob URLs); the
-	// cjs output format would otherwise rewrite it to require().
-	supported: { "dynamic-import": true },
 	mainFields: ["svelte", "browser", "module", "main"],
 	plugins: [
 		esbuildSvelte({

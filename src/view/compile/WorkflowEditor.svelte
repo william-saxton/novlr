@@ -10,11 +10,11 @@
 
 	let descriptions = $derived(callbacks.listStepDescriptions());
 	let groups = $derived([
-		{ label: "Node steps", items: descriptions.filter((d) => d.kind === "node" && !d.isScript) },
-		{ label: "Structure steps", items: descriptions.filter((d) => d.kind === "tree" && !d.isScript) },
-		{ label: "Build", items: descriptions.filter((d) => d.kind === "join" && !d.isScript) },
-		{ label: "Manuscript steps", items: descriptions.filter((d) => d.kind === "manuscript" && !d.isScript) },
-		{ label: "Your scripts", items: descriptions.filter((d) => d.isScript) },
+		{ label: "Node steps", items: descriptions.filter((d) => d.kind === "node" && !d.external) },
+		{ label: "Structure steps", items: descriptions.filter((d) => d.kind === "tree" && !d.external) },
+		{ label: "Build", items: descriptions.filter((d) => d.kind === "join" && !d.external) },
+		{ label: "Manuscript steps", items: descriptions.filter((d) => d.kind === "manuscript" && !d.external) },
+		{ label: "From other plugins", items: descriptions.filter((d) => d.external) },
 	]);
 
 	let addChoice = $state("");

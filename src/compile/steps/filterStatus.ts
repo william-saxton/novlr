@@ -49,7 +49,7 @@ export const FilterStatusStep: CompileStep = {
 		name: "Filter by status",
 		description: "Leaves out (or keeps only) nodes with certain statuses before the manuscript is built.",
 		kind: "tree",
-		isScript: false,
+		external: false,
 		options: [
 			{
 				id: "mode",

@@ -20,8 +20,6 @@ export interface NovelrSettings {
 	presets: SchemaPreset[];
 	/** Vault-wide compile workflows; a project references one by name. */
 	workflows: Workflow[];
-	/** Vault folder containing user-provided .js compile steps. Empty = disabled. */
-	userScriptFolder: string;
 	/** Text inserted for the {PB} placeholder. */
 	pageBreak: string;
 	/** Default basename (without .md) for new project index notes. */
@@ -41,7 +39,6 @@ export interface NovelrSettings {
 export const DEFAULT_SETTINGS: NovelrSettings = {
 	presets: [],
 	workflows: [],
-	userScriptFolder: "",
 	pageBreak: '<div style="page-break-after: always;"></div>',
 	indexNoteName: "novelr",
 	writeNodeType: true,
@@ -89,11 +86,6 @@ export class NovelrSettingTab extends PluginSettingTab {
 				heading: "Compile",
 				items: [
 					{
-						name: "User script folder",
-						desc: "Vault folder containing .js files that define custom compile steps. Leave empty to disable.",
-						control: { type: "folder", key: "userScriptFolder", placeholder: "Scripts/novelr" },
-					},
-					{
 						name: "Page break text",
 						desc: "Inserted wherever a compile step uses the {PB} placeholder.",
 						control: { type: "text", key: "pageBreak", defaultValue: DEFAULT_SETTINGS.pageBreak },
@@ -105,7 +97,7 @@ export class NovelrSettingTab extends PluginSettingTab {
 				heading: "Workflows",
 				emptyState: "No workflows. Restore the built-in ones or create one in the compile tab of the structure pane.",
 				extraButtons: [
-					(b) => b.setIcon("copy").setTooltip("Copy as JSON").onClick(() => void this.copyWorkflows()),
+					(b) => b.setIcon("upload").setTooltip("Export as JSON").onClick(() => this.exportWorkflows()),
 					(b) => b.setIcon("download").setTooltip("Import JSON").onClick(() => this.openImportWorkflows()),
 					(b) => b.setIcon("rotate-ccw").setTooltip("Restore built-in workflows").onClick(() => this.restoreBuiltinWorkflows()),
 				],
@@ -124,7 +116,7 @@ export class NovelrSettingTab extends PluginSettingTab {
 				heading: "Structure presets",
 				emptyState: "Save a project's schema as a preset from the project tab. The built-in presets are always available.",
 				extraButtons: [
-					(b) => b.setIcon("copy").setTooltip("Copy as JSON").onClick(() => void this.copyPresets()),
+					(b) => b.setIcon("upload").setTooltip("Export as JSON").onClick(() => this.exportPresets()),
 					(b) => b.setIcon("download").setTooltip("Import JSON").onClick(() => this.openImportPresets()),
 				],
 				onDelete: (index) => {
@@ -140,21 +132,14 @@ export class NovelrSettingTab extends PluginSettingTab {
 		];
 	}
 
-	override async setControlValue(key: string, value: unknown): Promise<void> {
-		await super.setControlValue(key, value);
-		if (key === "userScriptFolder") await this.plugin.scripts.reloadAll();
-	}
-
 	// ---- shared actions -----------------------------------------------------
 
-	private async copyWorkflows(): Promise<void> {
-		await navigator.clipboard.writeText(JSON.stringify(get(workflows), null, 2));
-		new Notice("Workflows copied to the clipboard.");
+	private exportWorkflows(): void {
+		new ExportJsonModal(this.app, "Export workflows", JSON.stringify(get(workflows), null, 2)).open();
 	}
 
-	private async copyPresets(): Promise<void> {
-		await navigator.clipboard.writeText(JSON.stringify(get(presets), null, 2));
-		new Notice("Presets copied to the clipboard.");
+	private exportPresets(): void {
+		new ExportJsonModal(this.app, "Export presets", JSON.stringify(get(presets), null, 2)).open();
 	}
 
 	private openImportWorkflows(): void {
@@ -269,6 +254,34 @@ class ImportJsonModal extends Modal {
 					else this.close();
 				}),
 		);
+	}
+
+	override onClose(): void {
+		this.contentEl.empty();
+	}
+}
+
+/** Shows JSON in a read-only, pre-selected textarea so the user can copy it themselves. */
+class ExportJsonModal extends Modal {
+	constructor(
+		app: App,
+		private readonly heading: string,
+		private readonly json: string,
+	) {
+		super(app);
+	}
+
+	override onOpen(): void {
+		this.setTitle(this.heading);
+		this.contentEl.createEl("p", { text: "Select the text below and copy it.", cls: "novelr-muted" });
+		const textarea = this.contentEl.createEl("textarea", { cls: "novelr-import-textarea" });
+		textarea.rows = 14;
+		textarea.readOnly = true;
+		textarea.value = this.json;
+		window.setTimeout(() => {
+			textarea.focus();
+			textarea.select();
+		}, 0);
 	}
 
 	override onClose(): void {
