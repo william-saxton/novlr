@@ -5,3 +5,5 @@ data.json
 test-vault/
 .DS_Store
 *.log
+
+.claude/settings.local.json

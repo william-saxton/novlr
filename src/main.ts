@@ -1,9 +1,12 @@
 import { Plugin, type WorkspaceLeaf } from "obsidian";
+import { NewProjectModal } from "./modals/NewProjectModal";
 import { DEFAULT_SETTINGS, NovelrSettingTab, type NovelrSettings } from "./settings";
+import { ProjectManager } from "./vault/projectManager";
 import { NovelrView, VIEW_TYPE_NOVELR } from "./view/NovelrView";
 
 export default class NovelrPlugin extends Plugin {
 	override settings: NovelrSettings = DEFAULT_SETTINGS;
+	projectManager: ProjectManager = new ProjectManager(this);
 
 	override async onload(): Promise<void> {
 		await this.loadSettings();
@@ -22,19 +25,23 @@ export default class NovelrPlugin extends Plugin {
 			},
 		});
 
+		this.addCommand({
+			id: "new-project",
+			name: "Create new project",
+			callback: () => {
+				new NewProjectModal(this.app, this).open();
+			},
+		});
+
 		this.addSettingTab(new NovelrSettingTab(this.app, this));
 
 		this.app.workspace.onLayoutReady(() => {
-			this.postLayoutInit();
+			this.projectManager.start();
 		});
 	}
 
 	override onunload(): void {
-		// Views and events registered through this.register* are cleaned up automatically.
-	}
-
-	private postLayoutInit(): void {
-		// Vault scanning and event registration live here (M1).
+		void this.projectManager.flush();
 	}
 
 	async activateView(): Promise<void> {

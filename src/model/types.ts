@@ -26,6 +26,8 @@ export interface SchemaPreset {
 
 export interface ProjectNode {
 	typeId: string;
+	/** Resolved from the schema at parse time; guessed for unknown types. Drives path derivation. */
+	kind: NodeKind;
 	/** Folder name or file basename without ".md". */
 	name: string;
 	/** Path relative to the project root folder; "" for the root. Content paths end in ".md". */

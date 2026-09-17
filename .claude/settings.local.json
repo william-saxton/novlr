@@ -1,7 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "PowerShell(foreach \\($p in @\\(\"obsidian\",\"typescript\",\"esbuild\",\"esbuild-svelte\",\"svelte\",\"svelte-check\",\"sortablejs\",\"@types/sortablejs\",\"vitest\",\"builtin-modules\",\"eslint\",\"typescript-eslint\",\"eslint-plugin-obsidianmd\",\"@types/node\",\"globals\",\"jiti\",\"tslib\"\\)\\) { \"$p \" + \\(npm view $p version 2>$null\\) })"
-    ]
-  }
-}

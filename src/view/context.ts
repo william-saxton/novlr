@@ -1,0 +1,26 @@
+import { getContext } from "svelte";
+import type { Project, ProjectNode, UnknownEntry } from "../model/types";
+
+/**
+ * Imperative operations the Svelte tree needs but must not perform itself.
+ * Implemented by NovelrView so components never import `obsidian`.
+ */
+export interface ViewCallbacks {
+	openNode(project: Project, node: ProjectNode): void;
+	openIndex(project: Project): void;
+	newProject(): void;
+	newNode(project: Project, parent: ProjectNode): void;
+	renameNode(project: Project, node: ProjectNode): void;
+	deleteNode(project: Project, node: ProjectNode): void;
+	moveNode(project: Project, nodePath: string, newParentPath: string, index: number): void;
+	showNodeMenu(project: Project, node: ProjectNode, event: MouseEvent): void;
+	addUnknown(project: Project, entry: UnknownEntry): void;
+	ignoreUnknown(project: Project, entry: UnknownEntry): void;
+	removeMissing(project: Project, path: string): void;
+}
+
+export const CALLBACKS_KEY = Symbol("novelr-callbacks");
+
+export function getCallbacks(): ViewCallbacks {
+	return getContext<ViewCallbacks>(CALLBACKS_KEY);
+}
