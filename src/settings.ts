@@ -1,9 +1,16 @@
-import { type App, Modal, Notice, PluginSettingTab, Setting } from "obsidian";
+import {
+	type App,
+	Modal,
+	Notice,
+	PluginSettingTab,
+	Setting,
+	type SettingDefinitionItem,
+} from "obsidian";
 import { get } from "svelte/store";
 import type { Workflow } from "./compile/types";
 import { DEFAULT_WORKFLOWS, cloneWorkflow, uniqueWorkflowName } from "./compile/workflows";
 import type NovelrPlugin from "./main";
-import { FolderSuggest } from "./modals/FolderSuggest";
+import { validateName } from "./model/paths";
 import { validateSchema } from "./model/schema";
 import type { SchemaPreset } from "./model/types";
 import { deletePreset, presets, workflows } from "./store/workflows";
@@ -19,7 +26,7 @@ export interface NovelrSettings {
 	pageBreak: string;
 	/** Default basename (without .md) for new project index notes. */
 	indexNoteName: string;
-	/** Write `novelr-type` frontmatter into newly created content files. */
+	/** Write `novelr-type` and `novelr-status` frontmatter into content files. */
 	writeNodeType: boolean;
 	/** Ask before trashing nodes. */
 	confirmDelete: boolean;
@@ -44,6 +51,9 @@ export const DEFAULT_SETTINGS: NovelrSettings = {
 	customColors: [],
 };
 
+/**
+ * Settings tab, rendered and indexed for search from `getSettingDefinitions()` (Obsidian 1.13+).
+ */
 export class NovelrSettingTab extends PluginSettingTab {
 	constructor(
 		app: App,
@@ -52,112 +62,115 @@ export class NovelrSettingTab extends PluginSettingTab {
 		super(app, plugin);
 	}
 
-	override display(): void {
-		const { containerEl } = this;
-		containerEl.empty();
-
-		new Setting(containerEl)
-			.setName("Index note name")
-			.setDesc("Basename used for the index note when creating a new project.")
-			.addText((text) =>
-				text.setValue(this.plugin.settings.indexNoteName).onChange(async (value) => {
-					this.plugin.settings.indexNoteName = value.trim() || DEFAULT_SETTINGS.indexNoteName;
-					await this.plugin.saveSettings();
-				}),
-			);
-
-		new Setting(containerEl)
-			.setName("Write node type and status to files")
-			.setDesc("Keep novelr-type and novelr-status properties on content files in sync so other plugins can query them.")
-			.addToggle((toggle) =>
-				toggle.setValue(this.plugin.settings.writeNodeType).onChange(async (value) => {
-					this.plugin.settings.writeNodeType = value;
-					await this.plugin.saveSettings();
-				}),
-			);
-
-		new Setting(containerEl)
-			.setName("Confirm before deleting")
-			.setDesc("Show a confirmation dialog before moving nodes to the trash.")
-			.addToggle((toggle) =>
-				toggle.setValue(this.plugin.settings.confirmDelete).onChange(async (value) => {
-					this.plugin.settings.confirmDelete = value;
-					await this.plugin.saveSettings();
-				}),
-			);
-
-		this.displayCompile(containerEl);
-		this.displayWorkflows(containerEl);
-		this.displayPresets(containerEl);
+	override getSettingDefinitions(): SettingDefinitionItem[] {
+		return [
+			{
+				name: "Index note name",
+				desc: "Basename used for the index note when creating a new project.",
+				control: {
+					type: "text",
+					key: "indexNoteName",
+					defaultValue: DEFAULT_SETTINGS.indexNoteName,
+					validate: (v) => validateName(v.trim()) ?? undefined,
+				},
+			},
+			{
+				name: "Write node type and status to files",
+				desc: "Keep novelr-type and novelr-status properties on content files in sync so other plugins can query them.",
+				control: { type: "toggle", key: "writeNodeType", defaultValue: true },
+			},
+			{
+				name: "Confirm before deleting",
+				desc: "Show a confirmation dialog before moving nodes to the trash.",
+				control: { type: "toggle", key: "confirmDelete", defaultValue: true },
+			},
+			{
+				type: "group",
+				heading: "Compile",
+				items: [
+					{
+						name: "User script folder",
+						desc: "Vault folder containing .js files that define custom compile steps. Leave empty to disable.",
+						control: { type: "folder", key: "userScriptFolder", placeholder: "Scripts/novelr" },
+					},
+					{
+						name: "Page break text",
+						desc: "Inserted wherever a compile step uses the {PB} placeholder.",
+						control: { type: "text", key: "pageBreak", defaultValue: DEFAULT_SETTINGS.pageBreak },
+					},
+				],
+			},
+			{
+				type: "list",
+				heading: "Workflows",
+				emptyState: "No workflows. Restore the built-in ones or create one in the compile tab of the structure pane.",
+				extraButtons: [
+					(b) => b.setIcon("copy").setTooltip("Copy as JSON").onClick(() => void this.copyWorkflows()),
+					(b) => b.setIcon("download").setTooltip("Import JSON").onClick(() => this.openImportWorkflows()),
+					(b) => b.setIcon("rotate-ccw").setTooltip("Restore built-in workflows").onClick(() => this.restoreBuiltinWorkflows()),
+				],
+				onDelete: (index) => {
+					const w = get(workflows)[index];
+					if (w) workflows.update((list) => list.filter((x) => x.name !== w.name));
+					this.update();
+				},
+				items: get(workflows).map((w) => ({
+					name: w.name,
+					desc: describeWorkflow(w),
+				})),
+			},
+			{
+				type: "list",
+				heading: "Structure presets",
+				emptyState: "Save a project's schema as a preset from the project tab. The built-in presets are always available.",
+				extraButtons: [
+					(b) => b.setIcon("copy").setTooltip("Copy as JSON").onClick(() => void this.copyPresets()),
+					(b) => b.setIcon("download").setTooltip("Import JSON").onClick(() => this.openImportPresets()),
+				],
+				onDelete: (index) => {
+					const p = get(presets)[index];
+					if (p) deletePreset(p.name);
+					this.update();
+				},
+				items: get(presets).map((p) => ({
+					name: p.name,
+					desc: p.schema.types.map((t) => t.name).join(" › "),
+				})),
+			},
+		];
 	}
 
-	private displayCompile(containerEl: HTMLElement): void {
-		new Setting(containerEl).setName("Compile").setHeading();
-
-		new Setting(containerEl)
-			.setName("User script folder")
-			.setDesc("Vault folder containing .js files that define custom compile steps. Leave empty to disable.")
-			.addText((text) => {
-				text.setValue(this.plugin.settings.userScriptFolder).onChange(async (value) => {
-					this.plugin.settings.userScriptFolder = value.trim();
-					await this.plugin.saveSettings();
-					await this.plugin.scripts.reloadAll();
-				});
-				new FolderSuggest(this.app, text.inputEl);
-			});
-
-		new Setting(containerEl)
-			.setName("Page break text")
-			.setDesc("Inserted wherever a compile step uses the {PB} placeholder.")
-			.addText((text) =>
-				text.setValue(this.plugin.settings.pageBreak).onChange(async (value) => {
-					this.plugin.settings.pageBreak = value;
-					await this.plugin.saveSettings();
-				}),
-			);
+	override async setControlValue(key: string, value: unknown): Promise<void> {
+		await super.setControlValue(key, value);
+		if (key === "userScriptFolder") await this.plugin.scripts.reloadAll();
 	}
 
-	private displayWorkflows(containerEl: HTMLElement): void {
-		new Setting(containerEl).setName("Workflows").setHeading();
+	// ---- shared actions -----------------------------------------------------
 
-		new Setting(containerEl)
-			.setName("Export and import")
-			.setDesc("Workflows are edited in the compile tab of the structure pane. Export them as JSON to share or back up.")
-			.addButton((button) =>
-				button.setButtonText("Copy as JSON").onClick(async () => {
-					await navigator.clipboard.writeText(JSON.stringify(get(workflows), null, 2));
-					new Notice("Workflows copied to the clipboard.");
-				}),
-			)
-			.addButton((button) =>
-				button.setButtonText("Import JSON").onClick(() => {
-					new ImportJsonModal(this.app, "Import workflows", (text) => this.importWorkflows(text)).open();
-				}),
-			)
-			.addButton((button) =>
-				button.setButtonText("Restore built-in").onClick(() => {
-					const names = get(workflows).map((w) => w.name);
-					const restored = DEFAULT_WORKFLOWS.map((w) => ({ ...cloneWorkflow(w), name: uniqueWorkflowName(w.name, names) }));
-					workflows.update((list) => [...list, ...restored]);
-					new Notice(`Added ${restored.length} workflows.`);
-					this.display();
-				}),
-			);
+	private async copyWorkflows(): Promise<void> {
+		await navigator.clipboard.writeText(JSON.stringify(get(workflows), null, 2));
+		new Notice("Workflows copied to the clipboard.");
+	}
 
-		for (const w of get(workflows)) {
-			new Setting(containerEl)
-				.setName(w.name)
-				.setDesc(`${w.steps.length} step${w.steps.length === 1 ? "" : "s"}${w.description ? ` · ${w.description}` : ""}`)
-				.addButton((button) =>
-					button
-						.setIcon("trash")
-						.setTooltip("Delete workflow")
-						.onClick(() => {
-							workflows.update((list) => list.filter((x) => x.name !== w.name));
-							this.display();
-						}),
-				);
-		}
+	private async copyPresets(): Promise<void> {
+		await navigator.clipboard.writeText(JSON.stringify(get(presets), null, 2));
+		new Notice("Presets copied to the clipboard.");
+	}
+
+	private openImportWorkflows(): void {
+		new ImportJsonModal(this.app, "Import workflows", (text) => this.importWorkflows(text)).open();
+	}
+
+	private openImportPresets(): void {
+		new ImportJsonModal(this.app, "Import presets", (text) => this.importPresets(text)).open();
+	}
+
+	private restoreBuiltinWorkflows(): void {
+		const names = get(workflows).map((w) => w.name);
+		const restored = DEFAULT_WORKFLOWS.map((w) => ({ ...cloneWorkflow(w), name: uniqueWorkflowName(w.name, names) }));
+		workflows.update((list) => [...list, ...restored]);
+		new Notice(`Added ${restored.length} workflows.`);
+		this.update();
 	}
 
 	private importWorkflows(text: string): string | null {
@@ -193,42 +206,8 @@ export class NovelrSettingTab extends PluginSettingTab {
 			return [...current, ...added];
 		});
 		new Notice(`Imported ${imported.length} workflow${imported.length === 1 ? "" : "s"}.`);
-		this.display();
+		this.update();
 		return null;
-	}
-
-	private displayPresets(containerEl: HTMLElement): void {
-		new Setting(containerEl).setName("Structure presets").setHeading();
-
-		new Setting(containerEl)
-			.setName("Saved presets")
-			.setDesc("Save a project's schema as a preset from the project tab. The built-in presets are always available.")
-			.addButton((button) =>
-				button.setButtonText("Copy as JSON").onClick(async () => {
-					await navigator.clipboard.writeText(JSON.stringify(get(presets), null, 2));
-					new Notice("Presets copied to the clipboard.");
-				}),
-			)
-			.addButton((button) =>
-				button.setButtonText("Import JSON").onClick(() => {
-					new ImportJsonModal(this.app, "Import presets", (text) => this.importPresets(text)).open();
-				}),
-			);
-
-		for (const p of get(presets)) {
-			new Setting(containerEl)
-				.setName(p.name)
-				.setDesc(p.schema.types.map((t) => t.name).join(" › "))
-				.addButton((button) =>
-					button
-						.setIcon("trash")
-						.setTooltip("Delete preset")
-						.onClick(() => {
-							deletePreset(p.name);
-							this.display();
-						}),
-				);
-		}
 	}
 
 	private importPresets(text: string): string | null {
@@ -251,9 +230,13 @@ export class NovelrSettingTab extends PluginSettingTab {
 		}
 		presets.update((current) => [...current.filter((c) => !imported.some((i) => i.name === c.name)), ...imported]);
 		new Notice(`Imported ${imported.length} preset${imported.length === 1 ? "" : "s"}.`);
-		this.display();
+		this.update();
 		return null;
 	}
+}
+
+function describeWorkflow(w: Workflow): string {
+	return `${w.steps.length} step${w.steps.length === 1 ? "" : "s"}${w.description ? ` · ${w.description}` : ""}`;
 }
 
 /** Paste-a-blob-of-JSON modal. `onSubmit` returns an error message to keep the modal open. */

@@ -83,6 +83,8 @@ export interface FormatEnv {
 
 export interface CompileContext {
 	app: App;
+	/** The `obsidian` module (Notice, normalizePath, ...) for user scripts, which cannot import it. */
+	obsidian: typeof import("obsidian");
 	project: Project;
 	/** Read-only view of the whole tree. */
 	root: CompileNode;

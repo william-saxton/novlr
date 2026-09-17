@@ -22,13 +22,12 @@ export default tseslint.config(
 		},
 	},
 	{
-		// User compile scripts are user-authored code the user opts into by naming a folder;
-		// evaluating them is the feature, so the eval guards are relaxed for this file only.
+		// User compile scripts are loaded with a dynamic import() of a blob: URL that this
+		// code creates itself from a file the user placed in a folder they chose. The rule
+		// only recognises HTML-sanitizer helpers as safe, so it cannot express that.
 		files: ["src/compile/userScripts.ts"],
 		rules: {
-			"obsidianmd/rule-custom-message": "off",
-			"@typescript-eslint/no-implied-eval": "off",
-			"no-new-func": "off",
+			"no-unsanitized/method": "off",
 		},
 	},
 );

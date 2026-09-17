@@ -1,4 +1,3 @@
-import * as obsidian from "obsidian";
 import { TAbstractFile, TFile, TFolder, normalizePath } from "obsidian";
 import { writable } from "svelte/store";
 import type NovelrPlugin from "../main";
@@ -64,7 +63,7 @@ export function stepFromExports(exports: unknown, canonicalID: string): CompileS
 
 /**
  * Loads `.js` files from the configured folder as compile steps and hot-reloads them.
- * Scripts run with `module`, `exports` and a `require` that only resolves "obsidian".
+ * Scripts are ES modules; they reach Obsidian through `ctx.obsidian` at compile time.
  */
 export class UserScriptLoader {
 	private readonly loaded = new Map<string, string>(); // path -> canonicalID
@@ -139,7 +138,7 @@ export class UserScriptLoader {
 		const canonicalID = `user:${file.basename}`;
 		try {
 			const source = await this.plugin.app.vault.read(file);
-			const step = evaluateScript(source, canonicalID);
+			const step = await evaluateScript(source, canonicalID);
 			const previous = this.loaded.get(file.path);
 			if (previous && previous !== canonicalID) this.registry.unregister(previous);
 			this.registry.register(step);
@@ -158,16 +157,18 @@ export class UserScriptLoader {
 	}
 }
 
-/** Evaluate a CommonJS-style script body and convert its exports into a step. */
-export function evaluateScript(source: string, canonicalID: string): CompileStep {
-	const module: { exports: unknown } = { exports: {} };
-	const require = (name: string): unknown => {
-		if (name === "obsidian") return obsidian;
-		throw new Error(`Scripts can only require "obsidian" (tried "${name}").`);
-	};
-	// User scripts are an explicit opt-in (a folder the user points at), the same model Longform uses.
-	// eslint.config.js relaxes the eval rules for this file only.
-	const fn = new Function("module", "exports", "require", source) as (m: unknown, e: unknown, r: unknown) => void;
-	fn(module, module.exports, require);
-	return stepFromExports(module.exports, canonicalID);
+/**
+ * Load a script as an ES module from a blob URL and convert its exports into a step.
+ * Accepts `export default { description, compile }` or named `description`/`compile` exports.
+ * No eval: the browser's module loader parses and runs the file.
+ */
+export async function evaluateScript(source: string, canonicalID: string): Promise<CompileStep> {
+	const url = URL.createObjectURL(new Blob([source], { type: "text/javascript" }));
+	try {
+		const mod = (await import(/* @vite-ignore */ url)) as Record<string, unknown>;
+		const exported = isRecord(mod["default"]) && "compile" in mod["default"] ? mod["default"] : mod;
+		return stepFromExports(exported, canonicalID);
+	} finally {
+		URL.revokeObjectURL(url);
+	}
 }

@@ -6,6 +6,8 @@ Novelr is inspired by [Longform](https://github.com/kevboh/longform) and [novelW
 
 ## Installation
 
+Requires Obsidian 1.13 or newer.
+
 - **Community plugins**: search for "Novelr" in Settings › Community plugins once it is listed.
 - **Manual**: download `main.js`, `manifest.json` and `styles.css` from the [latest release](https://github.com/william-saxton/novlr/releases/latest) into `<vault>/.obsidian/plugins/novelr/`, then enable the plugin.
 - **BRAT**: add `william-saxton/novlr` in the BRAT plugin to follow releases before the directory listing.
@@ -129,7 +131,7 @@ Node and structure steps come first, then one build step, then manuscript steps.
 Point **User script folder** in settings at a vault folder. Every `.js` file there becomes a step and reloads when saved:
 
 ```js
-module.exports = {
+export default {
   description: {
     name: "Shout",
     description: "Uppercases every scene.",
@@ -142,7 +144,7 @@ module.exports = {
 };
 ```
 
-Node steps receive `(node, ctx)` and mutate `node.text`, `node.before` or `node.after`. Tree steps receive `(root, ctx)` and may prune or reorder `children`. Build steps receive `(root, ctx)` and return a string. Manuscript steps receive `(text, ctx)` and return a string. `ctx.format(fmt, node)` expands placeholders, `ctx.app` is the Obsidian app, and `require("obsidian")` is available.
+Scripts are ES modules (`export default { description, compile }`, or named `description` and `compile` exports) loaded by the browser's module loader, not evaluated as text. Node steps receive `(node, ctx)` and mutate `node.text`, `node.before` or `node.after`. Tree steps receive `(root, ctx)` and may prune or reorder `children`. Build steps receive `(root, ctx)` and return a string. Manuscript steps receive `(text, ctx)` and return a string. `ctx.format(fmt, node)` expands placeholders, `ctx.app` is the Obsidian app, and `ctx.obsidian` is the `obsidian` module (for `Notice`, `normalizePath` and friends).
 
 ## Commands
 
