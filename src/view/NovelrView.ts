@@ -7,11 +7,21 @@ import { promptNewNode } from "../modals/NewNodeModal";
 import { NewProjectModal } from "../modals/NewProjectModal";
 import { promptText } from "../modals/TextPromptModal";
 import { dirname, join, validateName } from "../model/paths";
-import { allowedChildTypes, typeById } from "../model/schema";
+import { BUILTIN_PRESETS, allowedChildTypes, typeById } from "../model/schema";
 import { findByPath, parentOf } from "../model/tree";
 import type { Project, ProjectNode, UnknownEntry } from "../model/types";
 import { projects } from "../store/projects";
 import { setCollapsed } from "../store/ui";
+import {
+	createWorkflow,
+	deleteWorkflow,
+	findWorkflow,
+	presets,
+	renameWorkflow,
+	savePreset,
+	touchWorkflow,
+	workflows,
+} from "../store/workflows";
 import App from "./App.svelte";
 import { CALLBACKS_KEY, type ViewCallbacks } from "./context";
 
@@ -149,26 +159,101 @@ export class NovelrView extends ItemView {
 				if (file) void this.app.workspace.getLeaf(false).openFile(file);
 				else new Notice(`${path} was not found.`);
 			},
-			listWorkflows: () => this.plugin.compiler.workflows(),
-			setWorkflow: (project, name) => {
+			// Project
+			setTitle: (project, title) => this.ops.setTitle(this.live(project) ?? project, title),
+			setIgnore: (project, patterns) => this.ops.setIgnore(this.live(project) ?? project, patterns),
+			setSchema: (project, schema, renames) => {
 				const current = this.live(project) ?? project;
-				this.ops.setWorkflow(current, name);
+				const errors = this.ops.setSchema(current, schema, renames);
+				if (errors.length === 0) new Notice("Schema updated.");
+				return errors;
 			},
-			validateWorkflow: (project, name) => {
-				const workflow = this.plugin.compiler.findWorkflow(name);
-				if (!workflow) return { errors: [`Workflow "${name}" does not exist.`], warnings: [] };
-				return this.plugin.compiler.validate(project, workflow);
+			listPresets: () => [...BUILTIN_PRESETS, ...get(presets)],
+			savePreset: (project) => void this.savePreset(this.live(project) ?? project),
+			loadPreset: (project, preset) => {
+				const current = this.live(project) ?? project;
+				const errors = this.ops.loadPreset(current, preset);
+				if (errors.length > 0) new Notice(errors[0] ?? "Could not load the preset.");
+				else new Notice(`Loaded preset ${preset.name}.`);
 			},
+			removeProject: (project) => void this.removeProject(this.live(project) ?? project),
+			// Compile
+			setWorkflow: (project, name) => this.ops.setWorkflow(this.live(project) ?? project, name),
+			validateWorkflow: (project, workflow) => this.plugin.compiler.validate(project, workflow),
 			compile: async (project, name, onProgress) => {
 				const current = this.live(project) ?? project;
-				const workflow = this.plugin.compiler.findWorkflow(name);
+				const workflow = findWorkflow(name);
 				if (!workflow) return { ok: false, log: [], error: `Workflow "${name}" does not exist.`, outputs: {} };
 				return this.plugin.compiler.compile(current, workflow, onProgress);
 			},
-			editWorkflows: () => {
-				new Notice("Workflow editing is coming in the next milestone. Edit workflows in the plugin settings for now.");
+			listStepDescriptions: () => this.plugin.compiler.registry.all().map((s) => s.description),
+			stepDescription: (id) => this.plugin.compiler.registry.get(id)?.description,
+			newWorkflow: (project) => {
+				const created = createWorkflow();
+				this.ops.setWorkflow(this.live(project) ?? project, created.name);
 			},
+			duplicateWorkflow: (project, name) => {
+				const base = findWorkflow(name);
+				if (!base) return;
+				const created = createWorkflow(base);
+				this.ops.setWorkflow(this.live(project) ?? project, created.name);
+			},
+			renameWorkflow: (project, name) => void this.renameWorkflow(this.live(project) ?? project, name),
+			deleteWorkflow: (project, name) => void this.deleteWorkflow(this.live(project) ?? project, name),
+			workflowChanged: () => touchWorkflow(),
 		};
+	}
+
+	private async savePreset(project: Project): Promise<void> {
+		const name = await promptText(this.app, {
+			title: "Save schema as preset",
+			label: "Preset name",
+			initial: project.title,
+			submitText: "Save",
+			validate: (v) => (v.trim().length === 0 ? "Enter a name." : BUILTIN_PRESETS.some((p) => p.name === v.trim()) ? "That name belongs to a built-in preset." : null),
+		});
+		if (!name) return;
+		savePreset(name.trim(), project.schema);
+		new Notice(`Saved preset ${name.trim()}.`);
+	}
+
+	private async removeProject(project: Project): Promise<void> {
+		const ok = await confirm(this.app, {
+			title: `Remove ${project.title}?`,
+			message: "The novelr property is deleted from the index note. Your folders and notes stay exactly where they are.",
+			confirmText: "Remove",
+			danger: true,
+		});
+		if (!ok) return;
+		await this.ops.removeProject(project);
+	}
+
+	private async renameWorkflow(project: Project, name: string): Promise<void> {
+		const next = await promptText(this.app, {
+			title: "Rename workflow",
+			initial: name,
+			submitText: "Rename",
+			validate: (v) => (v.trim().length === 0 ? "Enter a name." : get(workflows).some((w) => w.name === v.trim() && w.name !== name) ? "A workflow with that name exists." : null),
+		});
+		if (!next || next.trim() === name) return;
+		if (renameWorkflow(name, next.trim())) {
+			// Every project referencing the old name follows it.
+			for (const p of get(projects).values()) if (p.workflow === name) this.ops.setWorkflow(p, next.trim());
+			if (project.workflow !== name) this.ops.setWorkflow(project, next.trim());
+		}
+	}
+
+	private async deleteWorkflow(project: Project, name: string): Promise<void> {
+		const ok = await confirm(this.app, {
+			title: `Delete workflow ${name}?`,
+			message: "Projects using it fall back to the first remaining workflow.",
+			confirmText: "Delete",
+			danger: true,
+		});
+		if (!ok) return;
+		deleteWorkflow(name);
+		for (const p of get(projects).values()) if (p.workflow === name) this.ops.setWorkflow(p, null);
+		if (project.workflow === name) this.ops.setWorkflow(project, null);
 	}
 
 	private openNode(project: Project, node: ProjectNode): void {

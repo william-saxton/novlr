@@ -5,6 +5,8 @@ import { DEFAULT_WORKFLOWS, cloneWorkflow } from "./compile/workflows";
 import { NewProjectModal } from "./modals/NewProjectModal";
 import { DEFAULT_SETTINGS, NovelrSettingTab, type NovelrSettings } from "./settings";
 import { currentProject, projectContaining } from "./store/projects";
+import { presets, workflows } from "./store/workflows";
+import { debounce } from "./utils/debounce";
 import { NodeOps } from "./vault/ops";
 import { ProjectManager } from "./vault/projectManager";
 import { NovelrView, VIEW_TYPE_NOVELR } from "./view/NovelrView";
@@ -53,10 +55,36 @@ export default class NovelrPlugin extends Plugin {
 
 		this.addSettingTab(new NovelrSettingTab(this.app, this));
 
+		// Workflows and presets live in Svelte stores so the pane reacts; settings mirror them.
+		workflows.set(this.settings.workflows);
+		presets.set(this.settings.presets);
+		const persist = debounce(() => void this.saveSettings(), 500);
+		this.register(
+			workflows.subscribe((list) => {
+				if (list !== this.settings.workflows) {
+					this.settings.workflows = list;
+					persist();
+				} else if (this.loaded) {
+					persist();
+				}
+			}),
+		);
+		this.register(
+			presets.subscribe((list) => {
+				if (list !== this.settings.presets) {
+					this.settings.presets = list;
+					persist();
+				}
+			}),
+		);
+		this.loaded = true;
+
 		this.app.workspace.onLayoutReady(() => {
 			this.projectManager.start();
 		});
 	}
+
+	private loaded = false;
 
 	override onunload(): void {
 		void this.projectManager.flush();

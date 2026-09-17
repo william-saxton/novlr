@@ -2,7 +2,8 @@ import { Notice, TFolder, normalizePath } from "obsidian";
 import type NovelrPlugin from "../main";
 import { basename, dirname, join, relativeTo, validateName } from "../model/paths";
 import { canContain, defaultContainerType, defaultContentType, typeById } from "../model/schema";
-import { NODE_TYPE_KEY, newContentFileText } from "../model/serialize";
+import { applySchemaChange, checkSchemaChange, missingTypesForPreset } from "../model/schemaOps";
+import { FRONTMATTER_KEY, NODE_TYPE_KEY, newContentFileText } from "../model/serialize";
 import {
 	cloneTree,
 	findByPath,
@@ -13,7 +14,7 @@ import {
 	siblingNames,
 	uniqueName,
 } from "../model/tree";
-import type { Project, ProjectNode, UnknownEntry } from "../model/types";
+import type { Project, ProjectNode, Schema, SchemaPreset, UnknownEntry } from "../model/types";
 import { updateProject } from "../store/projects";
 import { applyRename } from "./applyRename";
 
@@ -304,6 +305,37 @@ export class NodeOps {
 	setIgnore(project: Project, patterns: string[]): void {
 		this.commit(project, (p) => {
 			p.ignore = patterns.map((s) => s.trim()).filter((s) => s.length > 0);
+		});
+	}
+
+	// ---- schema -------------------------------------------------------------
+
+	/** Replace the schema, renaming node type ids as requested. Returns errors; applies only when empty. */
+	setSchema(project: Project, schema: Schema, renames: Record<string, string>): string[] {
+		const errors = checkSchemaChange(project, schema, renames);
+		if (errors.length > 0) return errors;
+		this.commit(project, (p) => {
+			applySchemaChange(p, schema, renames);
+			p.warnings = [];
+		});
+		return [];
+	}
+
+	/** Load a preset schema. Returns errors when the project's nodes need types the preset lacks. */
+	loadPreset(project: Project, preset: SchemaPreset): string[] {
+		const missing = missingTypesForPreset(project, preset.schema);
+		if (missing.length > 0) {
+			return [`This project uses type${missing.length === 1 ? "" : "s"} ${missing.map((m) => `"${m}"`).join(", ")} which "${preset.name}" does not define.`];
+		}
+		return this.setSchema(project, preset.schema, {});
+	}
+
+	/** Delete the `novelr` property from the index note; files are left alone. */
+	async removeProject(project: Project): Promise<void> {
+		const file = this.app.vault.getFileByPath(project.indexPath);
+		if (!file) return;
+		await this.app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
+			delete fm[FRONTMATTER_KEY];
 		});
 	}
 }

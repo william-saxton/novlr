@@ -1,6 +1,8 @@
 import { Notice } from "obsidian";
+import { get } from "svelte/store";
 import type NovelrPlugin from "../main";
 import type { Project } from "../model/types";
+import { workflows } from "../store/workflows";
 import { buildCompileTree } from "./buildTree";
 import { StepRegistry } from "./registry";
 import { runWorkflow, validateWorkflow } from "./runner";
@@ -14,7 +16,7 @@ export class CompileService {
 	constructor(private readonly plugin: NovelrPlugin) {}
 
 	workflows(): Workflow[] {
-		return this.plugin.settings.workflows;
+		return get(workflows);
 	}
 
 	findWorkflow(name: string | null): Workflow | undefined {

@@ -1,6 +1,6 @@
 import { getContext } from "svelte";
-import type { ProgressCallback, RunResult, ValidationResult, Workflow } from "../compile/types";
-import type { Project, ProjectNode, UnknownEntry } from "../model/types";
+import type { ProgressCallback, RunResult, StepDescription, ValidationResult, Workflow } from "../compile/types";
+import type { Project, ProjectNode, Schema, SchemaPreset, UnknownEntry } from "../model/types";
 
 /**
  * Imperative operations the Svelte tree needs but must not perform itself.
@@ -19,12 +19,26 @@ export interface ViewCallbacks {
 	addUnknown(project: Project, entry: UnknownEntry): void;
 	ignoreUnknown(project: Project, entry: UnknownEntry): void;
 	removeMissing(project: Project, path: string): void;
+	// Project
+	setTitle(project: Project, title: string): void;
+	setIgnore(project: Project, patterns: string[]): void;
+	/** Returns validation errors; applies when empty. */
+	setSchema(project: Project, schema: Schema, renames: Record<string, string>): string[];
+	listPresets(): SchemaPreset[];
+	savePreset(project: Project): void;
+	loadPreset(project: Project, preset: SchemaPreset): void;
+	removeProject(project: Project): void;
 	// Compile
-	listWorkflows(): Workflow[];
 	setWorkflow(project: Project, name: string | null): void;
-	validateWorkflow(project: Project, name: string): ValidationResult;
+	validateWorkflow(project: Project, workflow: Workflow): ValidationResult;
 	compile(project: Project, name: string, onProgress?: ProgressCallback): Promise<RunResult>;
-	editWorkflows(project: Project): void;
+	listStepDescriptions(): StepDescription[];
+	stepDescription(id: string): StepDescription | undefined;
+	newWorkflow(project: Project): void;
+	duplicateWorkflow(project: Project, name: string): void;
+	renameWorkflow(project: Project, name: string): void;
+	deleteWorkflow(project: Project, name: string): void;
+	workflowChanged(): void;
 }
 
 export const CALLBACKS_KEY = Symbol("novelr-callbacks");
