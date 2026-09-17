@@ -19,7 +19,7 @@
 		"writing",
 		"novel"
 	],
-	"license": "MIT",
+	"license": "Apache-2.0",
 	"dependencies": {
 		"sortablejs": "^1.15.7"
 	},
@@ -39,5 +39,11 @@
 		"typescript": "^5.9.3",
 		"typescript-eslint": "^8.70.0",
 		"vitest": "^5.0.1"
-	}
+	},
+	"author": "William Saxton",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/william-saxton/novlr.git"
+	},
+	"homepage": "https://github.com/william-saxton/novlr#readme"
 }

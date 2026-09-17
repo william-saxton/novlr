@@ -4,6 +4,12 @@ Long-form writing in Obsidian with a structure you define and a compile pipeline
 
 Novelr is inspired by [Longform](https://github.com/kevboh/longform) and [novelWriter](https://novelwriter.io). Where Longform gives you a flat list of scenes, Novelr lets you decide the shape of your project: a novel made of chapters made of scenes, a novel with parts, a screenplay with acts and sequences, or anything else. Containers are real folders and content nodes are real notes, so your vault stays plain Markdown that any other tool can read.
 
+## Installation
+
+- **Community plugins**: search for "Novelr" in Settings › Community plugins once it is listed.
+- **Manual**: download `main.js`, `manifest.json` and `styles.css` from the [latest release](https://github.com/william-saxton/novlr/releases/latest) into `<vault>/.obsidian/plugins/novelr/`, then enable the plugin.
+- **BRAT**: add `william-saxton/novlr` in the BRAT plugin to follow releases before the directory listing.
+
 ## Concepts
 
 - **Node type**: either a **container** (a folder with a title, holding other nodes) or **content** (a note with a title and a body). Each container type can restrict which types it accepts.
@@ -158,3 +164,7 @@ npm test
 npm run lint
 npm run build
 ```
+
+## License
+
+[Apache-2.0](LICENSE)

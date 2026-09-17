@@ -1,0 +1,35 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Build
+        run: |
+          npm ci
+          npm test
+          npm run build
+
+      - name: Publish release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          # Create the release if it does not exist yet, otherwise refresh its assets.
+          gh release create "$tag" --title "$tag" --generate-notes main.js manifest.json styles.css \
+            || gh release upload "$tag" main.js manifest.json styles.css --clobber
