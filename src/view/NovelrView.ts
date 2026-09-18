@@ -20,7 +20,7 @@ import {
 	presets,
 	renameWorkflow,
 	savePreset,
-	touchWorkflow,
+	saveWorkflow,
 	workflows,
 } from "../store/workflows";
 import App from "./App.svelte";
@@ -227,7 +227,7 @@ export class NovelrView extends ItemView {
 			},
 			renameWorkflow: (project, name) => void this.renameWorkflow(this.live(project) ?? project, name),
 			deleteWorkflow: (project, name) => void this.deleteWorkflow(this.live(project) ?? project, name),
-			workflowChanged: () => touchWorkflow(),
+			saveWorkflow: (workflow) => saveWorkflow(workflow),
 		};
 	}
 

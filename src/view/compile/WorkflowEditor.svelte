@@ -1,12 +1,27 @@
 <script lang="ts">
+	import { untrack } from "svelte";
 	import type { StepDescription, Workflow } from "../../compile/types";
-	import { newWorkflowStep } from "../../compile/workflows";
+	import { cloneWorkflow, newWorkflowStep } from "../../compile/workflows";
 	import type { Project } from "../../model/types";
+	import { deepEqual } from "../../utils/deepEqual";
 	import { getCallbacks } from "../context";
 	import StepCard from "./StepCard.svelte";
 
 	let { project, workflow }: { project: Project; workflow: Workflow } = $props();
 	const callbacks = getCallbacks();
+
+	// The store holds plain objects, which Svelte cannot observe, so the editor works on a
+	// reactive copy and writes it back after every change. The copy is reseeded only when
+	// the stored workflow differs from it (another workflow selected, renamed, or edited elsewhere).
+	let draft: Workflow = $state(untrack(() => cloneWorkflow(workflow)));
+
+	$effect(() => {
+		if (!deepEqual($state.snapshot(draft), workflow)) draft = cloneWorkflow(workflow);
+	});
+
+	function save(): void {
+		callbacks.saveWorkflow($state.snapshot(draft) as Workflow);
+	}
 
 	let descriptions = $derived(callbacks.listStepDescriptions());
 	let groups = $derived([
@@ -24,24 +39,24 @@
 		addChoice = "";
 		if (!description) return;
 		const step = newWorkflowStep(description);
-		// Put the new step in a sensible spot: node steps before the build step, manuscript steps after.
-		const joinIndex = workflow.steps.findIndex((s) => callbacks.stepDescription(s.id)?.kind === "join");
-		if ((description.kind === "node" || description.kind === "tree") && joinIndex !== -1) workflow.steps.splice(joinIndex, 0, step);
-		else workflow.steps.push(step);
-		callbacks.workflowChanged();
+		// Put the new step in a sensible spot: structure steps before the build step, manuscript steps after.
+		const joinIndex = draft.steps.findIndex((s) => callbacks.stepDescription(s.id)?.kind === "join");
+		if ((description.kind === "node" || description.kind === "tree") && joinIndex !== -1) draft.steps.splice(joinIndex, 0, step);
+		else draft.steps.push(step);
+		save();
 	}
 
 	function removeStep(index: number): void {
-		workflow.steps.splice(index, 1);
-		callbacks.workflowChanged();
+		draft.steps.splice(index, 1);
+		save();
 	}
 
 	function moveStep(index: number, delta: number): void {
 		const j = index + delta;
-		if (j < 0 || j >= workflow.steps.length) return;
-		const [item] = workflow.steps.splice(index, 1);
-		if (item) workflow.steps.splice(j, 0, item);
-		callbacks.workflowChanged();
+		if (j < 0 || j >= draft.steps.length) return;
+		const [item] = draft.steps.splice(index, 1);
+		if (item) draft.steps.splice(j, 0, item);
+		save();
 	}
 
 	function descriptionFor(id: string): StepDescription | undefined {
@@ -51,20 +66,20 @@
 
 <div class="novelr-workflow-editor">
 	<div class="novelr-inline">
-		<span class="novelr-field-label novelr-inline-label">{workflow.name}</span>
+		<span class="novelr-field-label novelr-inline-label">{draft.name}</span>
 		<span class="novelr-grow"></span>
-		<button onclick={() => callbacks.renameWorkflow(project, workflow.name)}>Rename</button>
-		<button onclick={() => callbacks.duplicateWorkflow(project, workflow.name)}>Duplicate</button>
-		<button class="mod-warning" onclick={() => callbacks.deleteWorkflow(project, workflow.name)}>Delete</button>
+		<button onclick={() => callbacks.renameWorkflow(project, draft.name)}>Rename</button>
+		<button onclick={() => callbacks.duplicateWorkflow(project, draft.name)}>Duplicate</button>
+		<button class="mod-warning" onclick={() => callbacks.deleteWorkflow(project, draft.name)}>Delete</button>
 	</div>
 
 	<label class="novelr-field">
 		<span class="novelr-field-label">Description</span>
-		<input type="text" class="novelr-input" bind:value={workflow.description} onchange={() => callbacks.workflowChanged()} />
+		<input type="text" class="novelr-input" bind:value={draft.description} onchange={save} />
 	</label>
 
 	<div class="novelr-steps">
-		{#each workflow.steps as step, i (step)}
+		{#each draft.steps as step, i (step)}
 			<StepCard
 				{project}
 				{step}
@@ -73,7 +88,7 @@
 				onremove={() => removeStep(i)}
 				onmoveup={() => moveStep(i, -1)}
 				onmovedown={() => moveStep(i, 1)}
-				onchange={() => callbacks.workflowChanged()}
+				onchange={save}
 			/>
 		{/each}
 	</div>

@@ -22,9 +22,9 @@ export function findWorkflow(name: string | null | undefined): Workflow | undefi
 	return get(workflows).find((w) => w.name === name);
 }
 
-/** Notify subscribers after mutating a workflow in place. */
-export function touchWorkflow(): void {
-	bump();
+/** Replace the stored workflow with the same name by a copy of `workflow`. */
+export function saveWorkflow(workflow: Workflow): void {
+	workflows.update((list) => list.map((w) => (w.name === workflow.name ? cloneWorkflow(workflow) : w)));
 }
 
 export function createWorkflow(base?: Workflow): Workflow {

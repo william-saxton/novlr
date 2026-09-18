@@ -52,7 +52,8 @@ export interface ViewCallbacks {
 	duplicateWorkflow(project: Project, name: string): void;
 	renameWorkflow(project: Project, name: string): void;
 	deleteWorkflow(project: Project, name: string): void;
-	workflowChanged(): void;
+	/** Persist an edited copy of a workflow (matched by name). */
+	saveWorkflow(workflow: Workflow): void;
 }
 
 export const CALLBACKS_KEY = Symbol("novelr-callbacks");
