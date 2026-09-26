@@ -99,7 +99,9 @@ export class ProjectManager {
 	/** Recompute `unknown` and `missing` for a project in place. */
 	refreshDiskState(project: Project): void {
 		const indexRel = relativeTo(project.rootFolder, project.indexPath) ?? project.indexPath;
-		const { unknown, missing } = reconcile(project.root, this.listDisk(project), project.ignore, indexRel);
+		const commentsPrefix = project.commentsFolder + "/";
+		const disk = this.listDisk(project).filter((e) => e.path !== project.commentsFolder && !e.path.startsWith(commentsPrefix));
+		const { unknown, missing } = reconcile(project.root, disk, project.ignore, indexRel);
 		project.unknown = unknown;
 		project.missing = missing;
 	}

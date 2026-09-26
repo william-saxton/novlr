@@ -1,4 +1,5 @@
-import { basename, dirname, stripMd } from "./paths";
+import { DEFAULT_COMMENTS_FOLDER } from "../comments/model";
+import { basename, dirname, stripMd, validateName } from "./paths";
 import { RESERVED_TYPE_IDS, typeById, validateSchema } from "./schema";
 import { DEFAULT_STATUSES, cloneStatuses, isStatusColor, validateStatuses } from "./status";
 import { recomputePaths, walk } from "./tree";
@@ -138,6 +139,7 @@ export function parseProject(indexPath: string, raw: unknown): ParseResult {
 	const workflow = asString(raw["workflow"]) ?? null;
 	const ignore = Array.isArray(raw["ignore"]) ? raw["ignore"].filter((s): s is string => typeof s === "string") : [];
 	const statuses = parseStatuses(raw["statuses"], warnings);
+	const commentsFolder = parseCommentsFolder(raw["comments"], warnings);
 	const root: ProjectNode = {
 		typeId: schema.rootType,
 		kind: "container",
@@ -153,9 +155,18 @@ export function parseProject(indexPath: string, raw: unknown): ParseResult {
 		if (node.status !== undefined && !known.has(node.status)) warnings.push(`"${node.name}" has unknown status "${node.status}".`);
 	});
 	return {
-		project: { indexPath, rootFolder, title, schema, statuses, root, workflow, ignore, unknown: [], missing: [], warnings },
+		project: { indexPath, rootFolder, title, schema, statuses, root, workflow, ignore, commentsFolder, unknown: [], missing: [], warnings },
 		warnings,
 	};
+}
+
+/** A single folder name; anything invalid falls back to the default with a warning. */
+function parseCommentsFolder(raw: unknown, warnings: string[]): string {
+	if (raw === undefined || raw === null) return DEFAULT_COMMENTS_FOLDER;
+	const name = asString(raw)?.trim();
+	if (name && validateName(name) === null) return name;
+	warnings.push(`Invalid comments folder ${JSON.stringify(raw)}; using ${DEFAULT_COMMENTS_FOLDER}.`);
+	return DEFAULT_COMMENTS_FOLDER;
 }
 
 function parseStatuses(raw: unknown, warnings: string[]): StatusDef[] {
@@ -219,6 +230,7 @@ export function serializeProject(project: Project): ProjectFrontmatter {
 	if (project.workflow) fm.workflow = project.workflow;
 	if (project.ignore.length > 0) fm.ignore = [...project.ignore];
 	if (project.root.status !== undefined) fm.rootStatus = project.root.status;
+	if (project.commentsFolder !== DEFAULT_COMMENTS_FOLDER) fm.comments = project.commentsFolder;
 	return fm;
 }
 

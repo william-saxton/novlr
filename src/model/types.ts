@@ -64,6 +64,8 @@ export interface ProjectFrontmatter {
 	ignore?: string[];
 	/** Explicit status of the root node, if set. */
 	rootStatus?: string;
+	/** Folder (relative to the root) holding comment files; omitted when it is the default. */
+	comments?: string;
 	tree: TreeEntry[];
 }
 
@@ -90,6 +92,8 @@ export interface Project {
 	root: ProjectNode;
 	workflow: string | null;
 	ignore: string[];
+	/** Folder (relative to the root) holding comment files. */
+	commentsFolder: string;
 	/** Derived: on disk under the root, not in the tree, not ignored, not the index note. */
 	unknown: UnknownEntry[];
 	/** Derived: in the tree but not on disk (relative paths). */

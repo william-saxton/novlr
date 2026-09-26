@@ -360,6 +360,17 @@ export class NodeOps {
 		});
 	}
 
+	/** Change the comments folder name; existing comment files are not moved. Returns an error or null. */
+	setCommentsFolder(project: Project, folder: string): string | null {
+		const name = folder.trim();
+		const error = validateName(name);
+		if (error) return error;
+		this.commit(project, (p) => {
+			p.commentsFolder = name;
+		});
+		return null;
+	}
+
 	setIgnore(project: Project, patterns: string[]): void {
 		this.commit(project, (p) => {
 			p.ignore = patterns.map((s) => s.trim()).filter((s) => s.length > 0);

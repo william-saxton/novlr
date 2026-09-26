@@ -81,3 +81,21 @@ describe("parseProject", () => {
 		expect(out.title).toBe("novelr");
 	});
 });
+
+describe("comments folder", () => {
+	it("defaults to _comments and is only written when changed", () => {
+		const { project, warnings } = parseProject("p/novelr.md", fm);
+		expect(warnings).toEqual([]);
+		expect(project!.commentsFolder).toBe("_comments");
+		expect(serializeProject(project!).comments).toBeUndefined();
+		project!.commentsFolder = "review";
+		expect(serializeProject(project!).comments).toBe("review");
+		expect(parseProject("p/novelr.md", { ...fm, comments: "review" }).project!.commentsFolder).toBe("review");
+	});
+
+	it("falls back with a warning on an invalid name", () => {
+		const { project, warnings } = parseProject("p/novelr.md", { ...fm, comments: "a/b" });
+		expect(project!.commentsFolder).toBe("_comments");
+		expect(warnings.some((w) => w.includes("comments folder"))).toBe(true);
+	});
+});

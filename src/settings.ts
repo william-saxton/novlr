@@ -34,6 +34,8 @@ export interface NovelrSettings {
 	collapsed: string[];
 	/** User-added hex colors offered as status swatches in every project. */
 	customColors: string[];
+	/** Highlight commented passages in the editor. */
+	highlightComments: boolean;
 }
 
 export const DEFAULT_SETTINGS: NovelrSettings = {
@@ -46,6 +48,7 @@ export const DEFAULT_SETTINGS: NovelrSettings = {
 	seededDefaults: false,
 	collapsed: [],
 	customColors: [],
+	highlightComments: true,
 };
 
 /**
@@ -80,6 +83,17 @@ export class NovelrSettingTab extends PluginSettingTab {
 				name: "Confirm before deleting",
 				desc: "Show a confirmation dialog before moving nodes to the trash.",
 				control: { type: "toggle", key: "confirmDelete", defaultValue: true },
+			},
+			{
+				type: "group",
+				heading: "Comments",
+				items: [
+					{
+						name: "Highlight commented text",
+						desc: "Mark passages with open comments in the editor. Click a highlight to show the comment.",
+						control: { type: "toggle", key: "highlightComments", defaultValue: true },
+					},
+				],
 			},
 			{
 				type: "group",
