@@ -95,6 +95,39 @@ novelr:
           status: new
 ```
 
+## Comments
+
+Proof readers and editors who share the vault can leave comments on your notes, and you can action them from a sidebar. Comments are built to travel over Obsidian Sync (or git, or any file sync):
+
+- **One Markdown note per comment**, stored in the project's comments folder (default `_comments`, changeable in the **Project** tab and saved in the index note so everyone uses the same folder). Markdown always syncs, and separate files mean two people commenting at the same time never overwrite each other. Nothing lives in the plugin's `data.json`.
+- **Anchored by text, not by position.** Each comment records the selected passage plus a little context on either side. When the note is opened, Novelr finds the passage again even if the text above it changed on another device; if the quoted words themselves were rewritten, it shows the closest match (dashed underline) or reports that the text is gone.
+- **Your name is remembered per device**, in Obsidian's local storage rather than plugin settings, so syncing settings never turns everyone into the same person.
+
+Select text in a note that belongs to a project, then right-click › **Add comment to selection** or run **Novelr: Add comment to selection (or note)**. With nothing selected the comment applies to the whole note. Commented passages are highlighted in the editor (turn this off in settings); click a highlight to show its comment.
+
+The **Novelr comments** pane (right sidebar, **Novelr: Open comments pane**) lists comments for the active note or the whole project, filtered by open or resolved, searchable and sortable by position or age. Each comment can be jumped to, replied to, edited, resolved or deleted. Resolving keeps the file with `status: resolved` so the author of the comment sees what happened; deleting moves it to the trash. The structure pane shows a count of open comments next to each note.
+
+A comment file looks like this:
+
+```yaml
+---
+novelr-comment: 1
+id: "20260926-134012-k3x9"
+note: "Chapter One/Opening.md"
+author: "Jane"
+created: "2026-09-26T13:40:12.000Z"
+status: "open"
+quote: "The rain fell in torrents"
+before: "It was a dark and stormy night. "
+after: ", except at occasional intervals"
+offset: 32
+---
+
+Too many adverbs here. Consider cutting the second clause.
+```
+
+`note` is relative to the project root and follows the note when it is renamed or moved. Replies carry `reply-to: "<id>"`. You can write or fix these files by hand; anything the plugin cannot read is simply not shown.
+
 ## Compile
 
 A workflow is a sequence of steps of four kinds:
@@ -154,7 +187,7 @@ Registered steps appear under "From other plugins" in the workflow editor. Node 
 ## What Novelr touches
 
 - On startup it checks the cached frontmatter of every Markdown note once to find index notes (the ones with a `novelr` property). It does not read file contents to do this.
-- It only reads and writes notes inside project folders: the index note, content nodes, and the manuscript written by a compile step.
+- It only reads and writes notes inside project folders: the index note, content nodes, comment files in the comments folder, and the manuscript written by a compile step.
 - It never runs code from your vault and never touches the clipboard or the network.
 
 ## Commands
@@ -167,6 +200,8 @@ Registered steps appear under "From other plugins" in the workflow editor. Node 
 - Reveal active file in structure pane
 - New node in current container
 - Set status of current node
+- Add comment to selection (or note)
+- Open comments pane
 
 ## Development
 

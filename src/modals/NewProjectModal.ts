@@ -1,3 +1,4 @@
+import { DEFAULT_COMMENTS_FOLDER } from "../comments/model";
 import { type App, Modal, Notice, Setting, normalizePath, stringifyYaml } from "obsidian";
 import type NovelrPlugin from "../main";
 import { join, validateName } from "../model/paths";
@@ -133,6 +134,7 @@ export class NewProjectModal extends Modal {
 			root: { typeId: preset.schema.rootType, kind: "container", name: title, path: "", children: [] },
 			workflow: null,
 			ignore: [],
+			commentsFolder: DEFAULT_COMMENTS_FOLDER,
 			unknown: [],
 			missing: [],
 			warnings: [],

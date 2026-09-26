@@ -24,6 +24,8 @@
 		"sortablejs": "^1.15.7"
 	},
 	"devDependencies": {
+		"@codemirror/state": "^6.7.6",
+		"@codemirror/view": "^6.38.6",
 		"@types/node": "^22.15.17",
 		"@types/sortablejs": "^1.15.9",
 		"esbuild": "^0.28.2",

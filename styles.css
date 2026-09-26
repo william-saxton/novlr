@@ -856,3 +856,280 @@
 	width: 16px;
 	height: 16px;
 }
+
+/* Comments */
+
+.novelr-comment-mark {
+	background: rgba(var(--color-yellow-rgb), 0.22);
+	border-bottom: 2px solid rgba(var(--color-yellow-rgb), 0.9);
+	cursor: pointer;
+}
+
+.novelr-comment-mark.is-moved {
+	border-bottom-style: dashed;
+}
+
+.theme-dark .novelr-comment-mark {
+	background: rgba(var(--color-yellow-rgb), 0.18);
+}
+
+.novelr-app button.novelr-comment-count {
+	flex-shrink: 0;
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+	height: auto;
+	min-width: 0;
+	padding: 0 var(--size-2-2);
+	line-height: 1.6;
+	font-size: var(--font-ui-smaller);
+	border-radius: var(--radius-l);
+	background: rgba(var(--color-yellow-rgb), 0.18);
+	color: var(--text-muted);
+	box-shadow: none;
+}
+
+.novelr-app button.novelr-comment-count:hover {
+	color: var(--text-normal);
+	background: rgba(var(--color-yellow-rgb), 0.32);
+}
+
+.novelr-comment-count svg {
+	width: 11px;
+	height: 11px;
+}
+
+.novelr-comments {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	min-height: 0;
+}
+
+.novelr-comments-toolbar {
+	display: flex;
+	align-items: center;
+	gap: var(--size-2-2);
+	padding: var(--size-4-2) var(--size-4-3) var(--size-2-2);
+}
+
+.novelr-comments-toolbar .novelr-segmented {
+	flex: 1;
+	min-width: 0;
+}
+
+.novelr-comments-toolbar .novelr-segmented button {
+	flex: 1;
+}
+
+.novelr-comments-filter {
+	font-size: var(--font-ui-smaller);
+}
+
+.novelr-comments-search {
+	padding: 0 var(--size-4-3) var(--size-4-2);
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.novelr-comments-search input {
+	width: 100%;
+}
+
+.novelr-comments-list {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	padding: var(--size-4-2) var(--size-4-3);
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-2);
+}
+
+.novelr-comments-note {
+	display: flex;
+	align-items: center;
+	gap: var(--size-2-2);
+	margin-top: var(--size-4-2);
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.novelr-comments-note:first-child {
+	margin-top: 0;
+}
+
+.novelr-comments-note-title {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.novelr-comment {
+	border: 1px solid var(--background-modifier-border);
+	border-left: 3px solid rgba(var(--color-yellow-rgb), 0.9);
+	border-radius: var(--radius-m);
+	padding: var(--size-2-3) var(--size-4-2);
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-2-2);
+	font-size: var(--font-ui-small);
+	background: var(--background-primary);
+	transition: box-shadow 200ms ease-out;
+}
+
+.novelr-comment.is-resolved {
+	border-left-color: var(--background-modifier-border);
+	opacity: 0.75;
+}
+
+.novelr-comment.is-focused {
+	box-shadow: 0 0 0 2px var(--interactive-accent);
+}
+
+.novelr-comment-note {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
+.novelr-comment-header {
+	display: flex;
+	align-items: baseline;
+	gap: var(--size-2-2);
+	min-width: 0;
+}
+
+.novelr-comment-author {
+	font-weight: var(--font-semibold);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.novelr-comment-time {
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+	flex: 1;
+}
+
+.novelr-comment-status {
+	flex-shrink: 0;
+}
+
+.novelr-comment-more {
+	align-self: center;
+	opacity: 0;
+}
+
+.novelr-comment:hover .novelr-comment-more,
+.novelr-comment:focus-within .novelr-comment-more {
+	opacity: 1;
+}
+
+.novelr-comments button.novelr-comment-quote {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--size-2-2);
+	width: 100%;
+	height: auto;
+	padding: var(--size-2-1) var(--size-2-2);
+	text-align: left;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	background: rgba(var(--color-yellow-rgb), 0.12);
+	border: none;
+	box-shadow: none;
+	border-radius: var(--radius-s);
+	white-space: normal;
+	line-height: 1.4;
+}
+
+.novelr-comments button.novelr-comment-quote:hover {
+	background: rgba(var(--color-yellow-rgb), 0.24);
+	color: var(--text-normal);
+}
+
+.novelr-comments button.novelr-comment-quote.is-note {
+	background: var(--background-modifier-hover);
+}
+
+.novelr-comments button.novelr-comment-quote.is-missing {
+	background: rgba(var(--color-red-rgb), 0.1);
+	text-decoration: line-through;
+}
+
+.novelr-comments button.novelr-comment-quote.is-moved .novelr-comment-quote-text {
+	font-style: italic;
+}
+
+.novelr-comment-quote-icon {
+	flex-shrink: 0;
+	display: inline-flex;
+	margin-top: 1px;
+}
+
+.novelr-comment-quote-icon svg {
+	width: 12px;
+	height: 12px;
+}
+
+.novelr-comment-quote-text {
+	flex: 1;
+	min-width: 0;
+	word-break: break-word;
+}
+
+.novelr-comment-body {
+	font-size: var(--font-ui-small);
+	word-break: break-word;
+}
+
+.novelr-comment-body p {
+	margin: 0 0 var(--size-2-2);
+}
+
+.novelr-comment-body p:last-child {
+	margin-bottom: 0;
+}
+
+.novelr-comment-reply {
+	margin-left: var(--size-4-3);
+	padding-left: var(--size-2-3);
+	border-left: 2px solid var(--background-modifier-border);
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-2-1);
+}
+
+.novelr-comment-actions {
+	display: flex;
+	gap: var(--size-2-2);
+	justify-content: flex-end;
+}
+
+.novelr-comments button.novelr-comment-action {
+	height: auto;
+	padding: 2px var(--size-2-3);
+	font-size: var(--font-ui-smaller);
+}
+
+/* Comment modal */
+
+.novelr-comment-quote {
+	margin: 0 0 var(--size-4-2);
+	font-size: var(--font-ui-small);
+	color: var(--text-muted);
+	max-height: 8em;
+	overflow-y: auto;
+	white-space: pre-wrap;
+}
+
+.novelr-comment-textarea {
+	width: 100%;
+	resize: vertical;
+	font-size: var(--font-ui-small);
+	margin-bottom: var(--size-2-2);
+}

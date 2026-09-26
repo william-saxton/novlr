@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Project } from "../../model/types";
 	import { activeFilePath } from "../../store/ui";
+	import { noteKey, openCountByNote } from "../../comments/store";
 	import { join } from "../../model/paths";
 	import { icon } from "../../utils/icons";
 	import { getCallbacks } from "../context";
@@ -17,6 +18,7 @@
 
 	let vaultPath = $derived(join(project.rootFolder, row.node.path));
 	let isActive = $derived(row.node.kind === "content" && $activeFilePath === vaultPath);
+	let openComments = $derived(row.node.kind === "content" ? ($openCountByNote.get(noteKey(project.rootFolder, row.node.path)) ?? 0) : 0);
 
 	function onClick(): void {
 		if (row.node.kind === "content") callbacks.openNode(project, row.node);
@@ -100,6 +102,19 @@
 			callbacks.showStatusMenu(project, row.node, e);
 		}}
 	></button>
+	{#if openComments > 0}
+		<button
+			class="novelr-comment-count"
+			title={`${openComments} open comment${openComments === 1 ? "" : "s"}`}
+			aria-label={`${openComments} open comment${openComments === 1 ? "" : "s"}`}
+			onclick={(e) => {
+				e.stopPropagation();
+				callbacks.showComments(project, row.node);
+			}}
+		>
+			<span use:icon={"message-square"}></span>{openComments}
+		</button>
+	{/if}
 	{#if row.missing}
 		<span class="novelr-row-badge" title="Not found on disk" use:icon={"alert-triangle"}></span>
 	{:else if row.unknownType}
