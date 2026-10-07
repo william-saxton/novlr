@@ -95,6 +95,39 @@ novelr:
           status: new
 ```
 
+## Comments
+
+Proof readers and editors who share the vault can leave comments on your notes, and you can action them from a sidebar. Comments are built to travel over Obsidian Sync (or git, or any file sync):
+
+- **One Markdown note per comment**, stored in the project's comments folder (default `_comments`, changeable in the **Project** tab and saved in the index note so everyone uses the same folder). Markdown always syncs, and separate files mean two people commenting at the same time never overwrite each other. Nothing lives in the plugin's `data.json`.
+- **Anchored by text, not by position.** Each comment records the selected passage plus a little context on either side. When the note is opened, Novelr finds the passage again even if the text above it changed on another device; if the quoted words themselves were rewritten, it shows the closest match (dashed underline) or reports that the text is gone.
+- **Your name is remembered per device**, in Obsidian's local storage rather than plugin settings, so syncing settings never turns everyone into the same person.
+
+Select text in a note that belongs to a project, then right-click › **Add comment to selection** or run **Novelr: Add comment to selection (or note)**. With nothing selected the comment applies to the whole note. Commented passages are highlighted in the editor (turn this off in settings); click a highlight to show its comment.
+
+The **Novelr comments** pane (right sidebar, **Novelr: Open comments pane**) lists comments for the active note or the whole project, filtered by open or resolved, searchable and sortable by position or age. Each comment can be jumped to, replied to, edited, resolved or deleted. Resolving keeps the file with `status: resolved` so the author of the comment sees what happened; deleting moves it to the trash. The structure pane shows a count of open comments next to each note.
+
+A comment file looks like this:
+
+```yaml
+---
+novelr-comment: 1
+id: "20260926-134012-k3x9"
+note: "Chapter One/Opening.md"
+author: "Jane"
+created: "2026-09-26T13:40:12.000Z"
+status: "open"
+quote: "The rain fell in torrents"
+before: "It was a dark and stormy night. "
+after: ", except at occasional intervals"
+offset: 32
+---
+
+Too many adverbs here. Consider cutting the second clause.
+```
+
+`note` is relative to the project root and follows the note when it is renamed or moved. Replies carry `reply-to: "<id>"`. You can write or fix these files by hand; anything the plugin cannot read is simply not shown.
+
 ## Compile
 
 A workflow is a sequence of steps of four kinds:
@@ -153,20 +186,21 @@ Registered steps appear under "From other plugins" in the workflow editor. Node 
 
 ## Grammar check
 
-Turn on **Enable grammar checking** in settings and Novelr can send a note to a Claude model and record what it finds as Obsidian comments right after the sentence concerned:
+Turn on **Enable grammar checking** in settings and Novelr can send a note to a Claude model and record what it finds as regular Novelr comments, anchored to the passage concerned and authored as "Grammar check":
 
-```markdown
-She walk to the door. %% grammar: "She walk" → "She walked" — tense %%
-```
+> **Grammar check** on *"She walk to the door"*
+> Subject-verb agreement: third-person singular needs "walks".
+>
+> Suggested: She walks to the door.
 
-The comments are invisible in reading view, stand out in the editor, and the **Remove comments** compile step strips them from the manuscript. Run it from the command palette (**Check grammar in current note**, **Check grammar in current container**) or right-click a node in the structure pane; containers are checked one note at a time. **Remove grammar comments** clears them again.
+They sit in the comments pane beside everyone else's, are highlighted in the editor, and can be resolved, replied to or deleted like any other comment. Run a check from the command palette (**Check grammar in current note**, **Check grammar in current container**) or right-click a node in the structure pane; containers are checked one note at a time. **Remove grammar comments** deletes the checker's comments on a note and leaves human ones alone.
 
-The check runs through the **Claude Code CLI** (`claude -p`) using whatever login and plan the CLI already has, so Novelr never stores an API key. It is desktop only. Settings let you pick the model (`--model`), add author guidance such as the dialect you write in, cap findings per note, and choose whether earlier grammar comments are replaced. Nothing is sent anywhere unless you run a check.
+The check runs through the **Claude Code CLI** (`claude -p`) using whatever login and plan the CLI already has, so Novelr never stores an API key. It is desktop only and needs the note to be part of a project. Settings let you pick the model (`--model`), add author guidance such as the dialect you write in, cap findings per note, and choose whether the checker's earlier comments on a note are replaced. Nothing is sent anywhere unless you run a check.
 
 ## What Novelr touches
 
 - On startup it checks the cached frontmatter of every Markdown note once to find index notes (the ones with a `novelr` property). It does not read file contents to do this.
-- It only reads and writes notes inside project folders: the index note, content nodes, and the manuscript written by a compile step.
+- It only reads and writes notes inside project folders: the index note, content nodes, comment files in the comments folder, and the manuscript written by a compile step.
 - It never runs code from your vault and never touches the clipboard or the network. The optional grammar check hands note text to the Claude CLI on your machine only when you run it.
 
 ## Commands
@@ -179,6 +213,8 @@ The check runs through the **Claude Code CLI** (`claude -p`) using whatever logi
 - Reveal active file in structure pane
 - New node in current container
 - Set status of current node
+- Add comment to selection (or note)
+- Open comments pane
 - Check grammar in current note / container, Remove grammar comments from current note (when grammar checking is enabled)
 
 ## Development

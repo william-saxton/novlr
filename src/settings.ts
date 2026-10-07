@@ -46,8 +46,10 @@ export interface NovelrSettings {
 	grammarInstructions: string;
 	grammarMaxFindings: number;
 	grammarTimeoutSeconds: number;
-	/** Remove earlier grammar comments from a note before adding new ones. */
+	/** Delete the checker's earlier comments on a note before adding new ones. */
 	grammarReplaceExisting: boolean;
+	/** Highlight commented passages in the editor. */
+	highlightComments: boolean;
 }
 
 export const DEFAULT_SETTINGS: NovelrSettings = {
@@ -68,6 +70,7 @@ export const DEFAULT_SETTINGS: NovelrSettings = {
 	grammarMaxFindings: 40,
 	grammarTimeoutSeconds: 180,
 	grammarReplaceExisting: true,
+	highlightComments: true,
 };
 
 /**
@@ -105,6 +108,17 @@ export class NovelrSettingTab extends PluginSettingTab {
 			},
 			{
 				type: "group",
+				heading: "Comments",
+				items: [
+					{
+						name: "Highlight commented text",
+						desc: "Mark passages with open comments in the editor. Click a highlight to show the comment.",
+						control: { type: "toggle", key: "highlightComments", defaultValue: true },
+					},
+				],
+			},
+			{
+				type: "group",
 				heading: "Compile",
 				items: [
 					{
@@ -120,7 +134,7 @@ export class NovelrSettingTab extends PluginSettingTab {
 				items: [
 					{
 						name: "Enable grammar checking",
-						desc: "Adds commands and menu items that send a note's text to a Claude model and record its findings as %% grammar %% comments. Desktop only.",
+						desc: "Adds commands and menu items that send a note's text to a Claude model and record its findings as Novelr comments. Desktop only.",
 						control: { type: "toggle", key: "grammarEnabled", defaultValue: false },
 					},
 					{
@@ -155,7 +169,7 @@ export class NovelrSettingTab extends PluginSettingTab {
 					},
 					{
 						name: "Replace earlier comments",
-						desc: "Remove existing grammar comments from a note before adding the new findings.",
+						desc: "Delete the checker's previous comments on a note before adding the new findings. Comments by people are never touched.",
 						control: { type: "toggle", key: "grammarReplaceExisting", defaultValue: true },
 						visible: () => this.plugin.settings.grammarEnabled,
 					},

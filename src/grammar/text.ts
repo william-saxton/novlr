@@ -1,31 +1,19 @@
 import type { GrammarFinding } from "./types";
 
-export const GRAMMAR_TAG = "grammar";
-
-/** Matches one grammar comment, including a single leading space. */
-const COMMENT_RE = /\s?%%\s*grammar:[\s\S]*?%%/g;
-
-/** Remove every grammar comment from the text; other `%% %%` comments are left alone. */
-export function stripGrammarComments(text: string): string {
-	return text.replace(COMMENT_RE, "");
-}
-
-export function countGrammarComments(text: string): number {
-	return (text.match(COMMENT_RE) ?? []).length;
-}
-
 export interface PreparedText {
-	/** Lines of the original note. */
-	lines: string[];
-	/** Indices into `lines` that were sent, in order (frontmatter and blank lines excluded). */
-	sent: number[];
-	/** The numbered text to send. */
+	/** The note text the offsets refer to. */
+	text: string;
+	/** Character offset where each sent line starts in `text`, in sent order. */
+	starts: number[];
+	/** The sent lines themselves (without numbering), in sent order. */
+	sentLines: string[];
+	/** The numbered text to send to the model. */
 	numbered: string;
 }
 
 /**
- * Split a note for checking: drop frontmatter and existing grammar comments, skip blank
- * lines, and number the remaining lines so the model can refer to them.
+ * Split a note for checking: skip frontmatter and blank lines, number the remaining lines
+ * so the model can refer to them, and remember where each one starts in the note.
  */
 export function prepareText(text: string): PreparedText {
 	const lines = text.split("\n");
@@ -34,62 +22,60 @@ export function prepareText(text: string): PreparedText {
 		const end = lines.findIndex((l, i) => i > 0 && l.trim() === "---");
 		if (end !== -1) start = end + 1;
 	}
-	const sent: number[] = [];
-	const out: string[] = [];
-	for (let i = start; i < lines.length; i++) {
-		const clean = stripGrammarComments(lines[i] as string);
-		if (clean.trim().length === 0) continue;
-		sent.push(i);
-		out.push(`${sent.length}: ${clean}`);
+	const starts: number[] = [];
+	const sentLines: string[] = [];
+	const numbered: string[] = [];
+	let offset = 0;
+	for (let i = 0; i < lines.length; i++) {
+		const line = lines[i] as string;
+		if (i >= start && line.trim().length > 0) {
+			starts.push(offset);
+			sentLines.push(line);
+			numbered.push(`${sentLines.length}: ${line}`);
+		}
+		offset += line.length + 1;
 	}
-	return { lines, sent, numbered: out.join("\n") };
+	return { text, starts, sentLines, numbered: numbered.join("\n") };
 }
 
-function sanitize(s: string): string {
-	return s.replace(/%%/g, "%").replace(/\s+/g, " ").trim();
-}
-
-/** Render one finding as an Obsidian comment. */
-export function formatComment(f: GrammarFinding): string {
-	const issue = sanitize(f.issue);
-	const quote = sanitize(f.quote);
-	const fix = sanitize(f.fix);
-	const body = fix.length > 0 ? `"${quote}" → "${fix}"` : `"${quote}"`;
-	return `%% ${GRAMMAR_TAG}: ${body}${issue ? ` — ${issue}` : ""} %%`;
-}
-
-export interface ApplyResult {
-	text: string;
-	placed: number;
-	unplaced: GrammarFinding[];
+export interface Span {
+	from: number;
+	to: number;
 }
 
 /**
- * Append a grammar comment to the line each finding refers to. The model's line number is
- * trusted only when the quoted text is really on that line; otherwise the first line
- * containing the quote wins; findings whose quote appears nowhere are returned unplaced.
+ * Find the character span a finding refers to. The model's line number is trusted only
+ * when the quote is really on that line; otherwise the first line containing the quote
+ * wins. A finding with an empty quote marks the whole reported line. Null when nothing matches.
  */
-export function applyFindings(prepared: PreparedText, findings: GrammarFinding[]): ApplyResult {
-	const lines = [...prepared.lines];
-	const unplaced: GrammarFinding[] = [];
-	let placed = 0;
-	for (const f of findings) {
-		const quote = f.quote.trim();
-		const byNumber = prepared.sent[f.line - 1];
-		let target: number | undefined;
-		if (byNumber !== undefined && quote.length > 0 && stripGrammarComments(lines[byNumber] as string).includes(quote)) {
-			target = byNumber;
-		} else if (quote.length > 0) {
-			target = prepared.sent.find((i) => stripGrammarComments(lines[i] as string).includes(quote));
-		} else if (byNumber !== undefined) {
-			target = byNumber;
-		}
-		if (target === undefined) {
-			unplaced.push(f);
-			continue;
-		}
-		lines[target] = `${lines[target] as string} ${formatComment(f)}`;
-		placed++;
+export function locateFinding(prepared: PreparedText, finding: GrammarFinding): Span | null {
+	const quote = finding.quote.trim();
+	const index = finding.line - 1;
+	const onLine = (i: number): Span | null => {
+		const line = prepared.sentLines[i];
+		const start = prepared.starts[i];
+		if (line === undefined || start === undefined) return null;
+		if (quote.length === 0) return { from: start, to: start + line.length };
+		const col = line.indexOf(quote);
+		return col === -1 ? null : { from: start + col, to: start + col + quote.length };
+	};
+	const direct = onLine(index);
+	if (direct) return direct;
+	if (quote.length === 0) return null;
+	for (let i = 0; i < prepared.sentLines.length; i++) {
+		if (i === index) continue;
+		const span = onLine(i);
+		if (span) return span;
 	}
-	return { text: lines.join("\n"), placed, unplaced };
+	return null;
+}
+
+/** Body text of the comment created for a finding. */
+export function commentBody(finding: GrammarFinding): string {
+	const issue = finding.issue.trim();
+	const fix = finding.fix.trim();
+	const parts: string[] = [];
+	if (issue) parts.push(issue);
+	if (fix && fix !== finding.quote.trim()) parts.push(`Suggested: ${fix}`);
+	return parts.join("\n\n") || "Possible grammar issue.";
 }

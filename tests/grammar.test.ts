@@ -1,42 +1,44 @@
 import { describe, expect, it } from "vitest";
 import { extractResult } from "../src/grammar/claudeCli";
 import { buildPrompt, parseFindings } from "../src/grammar/prompt";
-import { applyFindings, countGrammarComments, formatComment, prepareText, stripGrammarComments } from "../src/grammar/text";
+import { commentBody, locateFinding, prepareText } from "../src/grammar/text";
 
-const note = "---\nnovelr-type: scene\n---\n\n# Opening\n\nShe walk to the door. %% grammar: \"walk\" → \"walked\" — tense %%\n\nIt were cold outside.\n";
+const note = "---\nnovelr-type: scene\n---\n\n# Opening\n\nShe walk to the door.\n\nIt were cold outside.\n";
 
 describe("prepareText", () => {
-	it("drops frontmatter, blank lines and old grammar comments, numbering the rest", () => {
+	it("skips frontmatter and blank lines, numbers the rest, and records offsets", () => {
 		const p = prepareText(note);
 		expect(p.numbered).toBe("1: # Opening\n2: She walk to the door.\n3: It were cold outside.");
-		expect(p.sent).toEqual([4, 6, 8]);
+		expect(p.sentLines).toEqual(["# Opening", "She walk to the door.", "It were cold outside."]);
+		expect(p.starts.map((s) => note.slice(s, s + 5))).toEqual(["# Ope", "She w", "It we"]);
 	});
 });
 
-describe("applyFindings", () => {
-	it("places by line when the quote matches, falls back to search, reports the rest", () => {
-		const p = prepareText(stripGrammarComments(note));
-		const r = applyFindings(p, [
-			{ line: 2, quote: "She walk", issue: "tense", fix: "She walked" },
-			{ line: 1, quote: "It were", issue: "agreement", fix: "It was" }, // wrong line number
-			{ line: 3, quote: "nowhere", issue: "x", fix: "" },
-		]);
-		expect(r.placed).toBe(2);
-		expect(r.unplaced).toHaveLength(1);
-		const lines = r.text.split("\n");
-		expect(lines[6]).toBe('She walk to the door. %% grammar: "She walk" → "She walked" — tense %%');
-		expect(lines[8]).toBe('It were cold outside. %% grammar: "It were" → "It was" — agreement %%');
+describe("locateFinding", () => {
+	const p = prepareText(note);
+
+	it("uses the reported line when the quote is on it", () => {
+		const span = locateFinding(p, { line: 2, quote: "She walk", issue: "", fix: "" })!;
+		expect(note.slice(span.from, span.to)).toBe("She walk");
 	});
 
-	it("round-trips through strip and count", () => {
-		const p = prepareText("Hello there.\n");
-		const r = applyFindings(p, [{ line: 1, quote: "there", issue: "", fix: "" }]);
-		expect(countGrammarComments(r.text)).toBe(1);
-		expect(stripGrammarComments(r.text)).toBe("Hello there.\n");
+	it("falls back to searching other lines when the line number is wrong", () => {
+		const span = locateFinding(p, { line: 1, quote: "It were", issue: "", fix: "" })!;
+		expect(note.slice(span.from, span.to)).toBe("It were");
 	});
 
-	it("formatComment escapes comment markers", () => {
-		expect(formatComment({ line: 1, quote: "a %% b", issue: "odd", fix: "" })).toBe('%% grammar: "a % b" — odd %%');
+	it("marks the whole line for an empty quote and returns null for unknown text", () => {
+		const span = locateFinding(p, { line: 3, quote: "", issue: "", fix: "" })!;
+		expect(note.slice(span.from, span.to)).toBe("It were cold outside.");
+		expect(locateFinding(p, { line: 3, quote: "nowhere", issue: "", fix: "" })).toBeNull();
+		expect(locateFinding(p, { line: 99, quote: "", issue: "", fix: "" })).toBeNull();
+	});
+});
+
+describe("commentBody", () => {
+	it("combines issue and suggestion", () => {
+		expect(commentBody({ line: 1, quote: "She walk", issue: "Tense", fix: "She walked" })).toBe("Tense\n\nSuggested: She walked");
+		expect(commentBody({ line: 1, quote: "x", issue: "", fix: "x" })).toBe("Possible grammar issue.");
 	});
 });
 

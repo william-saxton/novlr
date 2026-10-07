@@ -189,6 +189,11 @@ export class NovelrView extends ItemView {
 			// Project
 			setTitle: (project, title) => this.ops.setTitle(this.live(project) ?? project, title),
 			setIgnore: (project, patterns) => this.ops.setIgnore(this.live(project) ?? project, patterns),
+			setCommentsFolder: (project, folder) => this.ops.setCommentsFolder(this.live(project) ?? project, folder),
+			showComments: (project, node) => {
+				this.openNode(project, node);
+				void this.plugin.openCommentsPane(true);
+			},
 			setSchema: (project, schema, renames) => {
 				const current = this.live(project) ?? project;
 				const errors = this.ops.setSchema(current, schema, renames);

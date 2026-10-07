@@ -10,6 +10,8 @@
 
 	let title = $state("");
 	let ignoreText = $state("");
+	let commentsFolder = $state("");
+	let commentsError = $state("");
 	let lastIndexPath = $state("");
 
 	// Re-seed the local inputs when a different project is shown or its saved values change.
@@ -18,8 +20,17 @@
 			lastIndexPath = project.indexPath;
 			title = project.title;
 			ignoreText = project.ignore.join("\n");
+			commentsFolder = project.commentsFolder;
+			commentsError = "";
 		}
 	});
+
+	function commitCommentsFolder(): void {
+		if (commentsFolder.trim() === project.commentsFolder) return;
+		const error = callbacks.setCommentsFolder(project, commentsFolder);
+		commentsError = error ?? "";
+		if (!error) commentsFolder = commentsFolder.trim();
+	}
 
 	function commitTitle(): void {
 		if (title.trim() && title.trim() !== project.title) callbacks.setTitle(project, title.trim());
@@ -67,6 +78,23 @@
 		<label class="novelr-field-label" for="novelr-ignore">Ignored paths</label>
 		<textarea id="novelr-ignore" class="novelr-textarea" rows="3" placeholder={"_notes/**\n*-scratch.md"} bind:value={ignoreText} onblur={commitIgnore}></textarea>
 		<div class="novelr-muted">One glob per line, relative to the root folder. Matching files never show as unknown.</div>
+	</div>
+
+	<div class="novelr-field">
+		<label class="novelr-field-label" for="novelr-comments-folder">Comments folder</label>
+		<input
+			id="novelr-comments-folder"
+			type="text"
+			class="novelr-input"
+			class:is-error={commentsError.length > 0}
+			bind:value={commentsFolder}
+			onblur={commitCommentsFolder}
+			onkeydown={(e) => e.key === "Enter" && commitCommentsFolder()}
+		/>
+		{#if commentsError}
+			<div class="novelr-form-error">{commentsError}</div>
+		{/if}
+		<div class="novelr-muted">Folder inside the root that holds comment files (one note per comment). Saved in the index note so everyone who syncs this vault uses the same one.</div>
 	</div>
 
 	<SchemaEditor {project} />

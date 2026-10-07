@@ -1,20 +1,26 @@
-import { type App, FuzzySuggestModal, Notice, Plugin, type WorkspaceLeaf } from "obsidian";
+import { type App, type Editor, FuzzySuggestModal, type MarkdownFileInfo, type MarkdownView, Notice, Plugin, type WorkspaceLeaf } from "obsidian";
 import { get } from "svelte/store";
 import { CompileService } from "./compile/service";
 import { NovelrAPI } from "./api";
 import { GrammarService } from "./grammar/service";
+import { commentHighlighter } from "./comments/editorExtension";
+import { CommentManager } from "./comments/manager";
+import { makeAnchor } from "./comments/model";
+import { bumpEditorTick } from "./comments/store";
 import { DEFAULT_WORKFLOWS, cloneWorkflow } from "./compile/workflows";
+import { promptComment } from "./modals/CommentModal";
 import { NewProjectModal } from "./modals/NewProjectModal";
 import { dirname, relativeTo } from "./model/paths";
 import { contentNodes, findByPath } from "./model/tree";
 import type { Project, ProjectNode } from "./model/types";
 import { DEFAULT_SETTINGS, NovelrSettingTab, type NovelrSettings } from "./settings";
 import { currentProject, projectContaining, selectedIndexPath } from "./store/projects";
-import { activeTab, collapsed, revealPath } from "./store/ui";
+import { activeFilePath, activeTab, collapsed, revealPath } from "./store/ui";
 import { palette, presets, workflows } from "./store/workflows";
 import { debounce } from "./utils/debounce";
 import { NodeOps } from "./vault/ops";
 import { ProjectManager } from "./vault/projectManager";
+import { CommentsView, VIEW_TYPE_COMMENTS } from "./view/comments/CommentsView";
 import { NovelrView, VIEW_TYPE_NOVELR } from "./view/NovelrView";
 
 export default class NovelrPlugin extends Plugin {
@@ -22,6 +28,7 @@ export default class NovelrPlugin extends Plugin {
 	projectManager: ProjectManager = new ProjectManager(this);
 	ops: NodeOps = new NodeOps(this);
 	compiler: CompileService = new CompileService(this);
+	comments: CommentManager = new CommentManager(this);
 	/** Public API for other plugins; see src/api.ts. */
 	api: NovelrAPI = new NovelrAPI(this);
 	grammar: GrammarService = new GrammarService(this);
@@ -31,6 +38,7 @@ export default class NovelrPlugin extends Plugin {
 		await this.loadSettings();
 
 		this.registerView(VIEW_TYPE_NOVELR, (leaf) => new NovelrView(leaf, this));
+		this.registerView(VIEW_TYPE_COMMENTS, (leaf) => new CommentsView(leaf, this));
 
 		this.addRibbonIcon("book-open", "Open structure pane", () => {
 			void this.activateView();
@@ -39,9 +47,11 @@ export default class NovelrPlugin extends Plugin {
 		this.registerCommands();
 		this.addSettingTab(new NovelrSettingTab(this.app, this));
 		this.bindStores();
+		this.bindComments();
 
 		this.app.workspace.onLayoutReady(() => {
 			this.projectManager.start();
+			this.comments.start();
 		});
 	}
 
@@ -84,9 +94,104 @@ export default class NovelrPlugin extends Plugin {
 		this.loaded = true;
 	}
 
+	// ---- comments -----------------------------------------------------------
+
+	private bindComments(): void {
+		this.registerEditorExtension(commentHighlighter(this));
+		const tick = debounce(() => bumpEditorTick(), 400);
+		this.registerEvent(this.app.workspace.on("editor-change", () => tick()));
+		this.registerEvent(this.app.workspace.on("active-leaf-change", () => bumpEditorTick()));
+		this.registerEvent(
+			this.app.workspace.on("editor-menu", (menu, editor, info) => {
+				const path = info.file?.path;
+				if (!path || !this.comments.locateNote(path)) return;
+				const hasSelection = editor.somethingSelected();
+				menu.addItem((item) =>
+					item
+						.setTitle(hasSelection ? "Add comment to selection" : "Comment on this note")
+						.setIcon("message-square-plus")
+						.setSection("novelr")
+						.onClick(() => void this.addComment(editor, path)),
+				);
+			}),
+		);
+	}
+
+	/** Comment on the editor's selection, or on the whole note when nothing is selected. */
+	async addComment(editor: Editor, filePath: string): Promise<void> {
+		const located = this.comments.locateNote(filePath);
+		if (!located) {
+			new Notice("This note is not inside a project.");
+			return;
+		}
+		const text = editor.getValue();
+		const from = editor.posToOffset(editor.getCursor("from"));
+		const to = editor.posToOffset(editor.getCursor("to"));
+		const anchor = editor.somethingSelected() ? makeAnchor(text, Math.min(from, to), Math.max(from, to)) : null;
+		const result = await promptComment(this.app, {
+			title: anchor ? "Comment on selection" : `Comment on ${located.note}`,
+			...(anchor ? { quote: anchor.quote } : {}),
+			author: this.comments.author(),
+			submitText: "Add comment",
+		});
+		if (!result) return;
+		this.comments.setAuthor(result.author);
+		const created = await this.comments.create(located.project, { note: located.note, author: result.author, body: result.body, anchor });
+		if (created) await this.openCommentsPane(false);
+	}
+
+	/** Used by the comments pane's plus button: a whole-note comment on the last active note. */
+	async addCommentOnActiveNote(): Promise<void> {
+		const path = get(activeFilePath) ?? this.app.workspace.getActiveFile()?.path;
+		const located = path ? this.comments.locateNote(path) : undefined;
+		if (!located) {
+			new Notice("Open a note of the project first.");
+			return;
+		}
+		const result = await promptComment(this.app, {
+			title: `Comment on ${located.note}`,
+			author: this.comments.author(),
+			submitText: "Add comment",
+		});
+		if (!result) return;
+		this.comments.setAuthor(result.author);
+		await this.comments.create(located.project, { note: located.note, author: result.author, body: result.body, anchor: null });
+	}
+
+	/** Open (and optionally reveal) the comments pane in the right sidebar. */
+	async openCommentsPane(reveal: boolean): Promise<void> {
+		const { workspace } = this.app;
+		let leaf: WorkspaceLeaf | null = workspace.getLeavesOfType(VIEW_TYPE_COMMENTS)[0] ?? null;
+		if (!leaf) {
+			leaf = workspace.getRightLeaf(false);
+			if (!leaf) return;
+			await leaf.setViewState({ type: VIEW_TYPE_COMMENTS, active: reveal });
+		}
+		if (reveal || !leaf.view.containerEl.isShown()) await workspace.revealLeaf(leaf);
+	}
+
 	// ---- commands -----------------------------------------------------------
 
 	private registerCommands(): void {
+		this.addCommand({
+			id: "add-comment",
+			name: "Add comment to selection (or note)",
+			editorCheckCallback: (checking: boolean, editor: Editor, info: MarkdownView | MarkdownFileInfo) => {
+				const path = info.file?.path;
+				if (!path || !this.comments.locateNote(path)) return false;
+				if (!checking) void this.addComment(editor, path);
+				return true;
+			},
+		});
+
+		this.addCommand({
+			id: "open-comments",
+			name: "Open comments pane",
+			callback: () => {
+				void this.openCommentsPane(true);
+			},
+		});
+
 		this.addCommand({
 			id: "open-view",
 			name: "Open structure pane",

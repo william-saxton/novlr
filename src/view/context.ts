@@ -36,6 +36,10 @@ export interface ViewCallbacks {
 	// Project
 	setTitle(project: Project, title: string): void;
 	setIgnore(project: Project, patterns: string[]): void;
+	/** Returns an error message, or null when applied. */
+	setCommentsFolder(project: Project, folder: string): string | null;
+	/** Open the note and the comments pane. */
+	showComments(project: Project, node: ProjectNode): void;
 	/** Returns validation errors; applies when empty. */
 	setSchema(project: Project, schema: Schema, renames: Record<string, string>): string[];
 	listPresets(): SchemaPreset[];
