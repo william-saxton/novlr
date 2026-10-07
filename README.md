@@ -151,11 +151,23 @@ novelr?.api.registerStep({
 
 Registered steps appear under "From other plugins" in the workflow editor. Node steps receive `(node, ctx)` and mutate `node.text`, `node.before` or `node.after`. Tree steps receive `(root, ctx)` and may prune or reorder `children`. Build steps receive `(root, ctx)` and return a string. Manuscript steps receive `(text, ctx)` and return a string. `ctx.format(fmt, node)` expands placeholders and `ctx.app` is the Obsidian app.
 
+## Grammar check
+
+Turn on **Enable grammar checking** in settings and Novelr can send a note to a Claude model and record what it finds as Obsidian comments right after the sentence concerned:
+
+```markdown
+She walk to the door. %% grammar: "She walk" → "She walked" — tense %%
+```
+
+The comments are invisible in reading view, stand out in the editor, and the **Remove comments** compile step strips them from the manuscript. Run it from the command palette (**Check grammar in current note**, **Check grammar in current container**) or right-click a node in the structure pane; containers are checked one note at a time. **Remove grammar comments** clears them again.
+
+The check runs through the **Claude Code CLI** (`claude -p`) using whatever login and plan the CLI already has, so Novelr never stores an API key. It is desktop only. Settings let you pick the model (`--model`), add author guidance such as the dialect you write in, cap findings per note, and choose whether earlier grammar comments are replaced. Nothing is sent anywhere unless you run a check.
+
 ## What Novelr touches
 
 - On startup it checks the cached frontmatter of every Markdown note once to find index notes (the ones with a `novelr` property). It does not read file contents to do this.
 - It only reads and writes notes inside project folders: the index note, content nodes, and the manuscript written by a compile step.
-- It never runs code from your vault and never touches the clipboard or the network.
+- It never runs code from your vault and never touches the clipboard or the network. The optional grammar check hands note text to the Claude CLI on your machine only when you run it.
 
 ## Commands
 
@@ -167,6 +179,7 @@ Registered steps appear under "From other plugins" in the workflow editor. Node 
 - Reveal active file in structure pane
 - New node in current container
 - Set status of current node
+- Check grammar in current note / container, Remove grammar comments from current note (when grammar checking is enabled)
 
 ## Development
 

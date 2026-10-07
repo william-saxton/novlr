@@ -467,6 +467,22 @@ export class NovelrView extends ItemView {
 				);
 			}
 		}
+		if (this.plugin.grammar.enabled) {
+			menu.addSeparator();
+			menu.addItem((item) =>
+				item
+					.setTitle(node.kind === "container" ? "Check grammar in all notes inside" : "Check grammar")
+					.setIcon("spell-check")
+					.onClick(() => void this.plugin.grammar.checkNode(current, node)),
+			);
+			menu.addItem((item) =>
+				item
+					.setTitle("Remove grammar comments")
+					.setIcon("eraser")
+					.onClick(() => void this.plugin.grammar.clearNode(current, node)),
+			);
+			menu.addSeparator();
+		}
 		menu.addItem((item) =>
 			item
 				.setTitle("Delete")

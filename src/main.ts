@@ -2,6 +2,7 @@ import { type App, FuzzySuggestModal, Notice, Plugin, type WorkspaceLeaf } from 
 import { get } from "svelte/store";
 import { CompileService } from "./compile/service";
 import { NovelrAPI } from "./api";
+import { GrammarService } from "./grammar/service";
 import { DEFAULT_WORKFLOWS, cloneWorkflow } from "./compile/workflows";
 import { NewProjectModal } from "./modals/NewProjectModal";
 import { dirname, relativeTo } from "./model/paths";
@@ -23,6 +24,7 @@ export default class NovelrPlugin extends Plugin {
 	compiler: CompileService = new CompileService(this);
 	/** Public API for other plugins; see src/api.ts. */
 	api: NovelrAPI = new NovelrAPI(this);
+	grammar: GrammarService = new GrammarService(this);
 	private loaded = false;
 
 	override async onload(): Promise<void> {
@@ -156,6 +158,43 @@ export default class NovelrPlugin extends Plugin {
 				const located = this.activeNode();
 				if (!located) return false;
 				if (!checking) new StatusSuggestModal(this.app, this, located.project, located.node).open();
+				return true;
+			},
+		});
+
+		this.addCommand({
+			id: "check-grammar",
+			name: "Check grammar in current note",
+			checkCallback: (checking) => {
+				const file = this.app.workspace.getActiveFile();
+				if (!this.grammar.enabled || !file || file.extension !== "md") return false;
+				if (!checking) void this.grammar.checkFile(file);
+				return true;
+			},
+		});
+
+		this.addCommand({
+			id: "check-grammar-container",
+			name: "Check grammar in current container",
+			checkCallback: (checking) => {
+				const located = this.activeNode();
+				if (!this.grammar.enabled || !located) return false;
+				const parentPath = located.node.kind === "container" ? located.node.path : dirname(located.node.path);
+				const parent = findByPath(located.project.root, parentPath) ?? located.project.root;
+				if (!checking) void this.grammar.checkNode(located.project, parent);
+				return true;
+			},
+		});
+
+		this.addCommand({
+			id: "clear-grammar",
+			name: "Remove grammar comments from current note",
+			checkCallback: (checking) => {
+				const file = this.app.workspace.getActiveFile();
+				if (!this.grammar.enabled || !file || file.extension !== "md") return false;
+				if (!checking) {
+					void this.grammar.clearFile(file).then((n) => new Notice(`Removed ${n} grammar comment${n === 1 ? "" : "s"}.`));
+				}
 				return true;
 			},
 		});

@@ -34,6 +34,20 @@ export interface NovelrSettings {
 	collapsed: string[];
 	/** User-added hex colors offered as status swatches in every project. */
 	customColors: string[];
+	/** Grammar checking through a Claude model. Off by default; desktop only. */
+	grammarEnabled: boolean;
+	/** Which backend runs the check. Only "claude-cli" exists today. */
+	grammarProvider: string;
+	/** Executable name or full path of the Claude Code CLI. */
+	grammarCliPath: string;
+	/** Model passed to the CLI; empty uses the CLI's own default. */
+	grammarModel: string;
+	/** Extra guidance appended to the prompt (dialect, genre conventions). */
+	grammarInstructions: string;
+	grammarMaxFindings: number;
+	grammarTimeoutSeconds: number;
+	/** Remove earlier grammar comments from a note before adding new ones. */
+	grammarReplaceExisting: boolean;
 }
 
 export const DEFAULT_SETTINGS: NovelrSettings = {
@@ -46,6 +60,14 @@ export const DEFAULT_SETTINGS: NovelrSettings = {
 	seededDefaults: false,
 	collapsed: [],
 	customColors: [],
+	grammarEnabled: false,
+	grammarProvider: "claude-cli",
+	grammarCliPath: "claude",
+	grammarModel: "",
+	grammarInstructions: "",
+	grammarMaxFindings: 40,
+	grammarTimeoutSeconds: 180,
+	grammarReplaceExisting: true,
 };
 
 /**
@@ -93,6 +115,53 @@ export class NovelrSettingTab extends PluginSettingTab {
 				],
 			},
 			{
+				type: "group",
+				heading: "Grammar check",
+				items: [
+					{
+						name: "Enable grammar checking",
+						desc: "Adds commands and menu items that send a note's text to a Claude model and record its findings as %% grammar %% comments. Desktop only.",
+						control: { type: "toggle", key: "grammarEnabled", defaultValue: false },
+					},
+					{
+						name: "Claude CLI command",
+						desc: "Executable name or full path of the Claude Code CLI. It must already be logged in.",
+						control: { type: "text", key: "grammarCliPath", defaultValue: "claude" },
+						visible: () => this.plugin.settings.grammarEnabled,
+					},
+					{
+						name: "Model",
+						desc: "Passed to the CLI as --model. Leave empty to use the CLI's default; otherwise an id such as claude-opus-5-5 or an alias such as sonnet.",
+						control: { type: "text", key: "grammarModel", placeholder: "claude-opus-5-5" },
+						visible: () => this.plugin.settings.grammarEnabled,
+					},
+					{
+						name: "Author guidance",
+						desc: "Appended to every check, for example the dialect you write in or conventions the checker should respect.",
+						control: { type: "textarea", key: "grammarInstructions", placeholder: "British English. Dialogue may use fragments." },
+						visible: () => this.plugin.settings.grammarEnabled,
+					},
+					{
+						name: "Maximum findings per note",
+						desc: "Keeps long notes from drowning in comments.",
+						control: { type: "number", key: "grammarMaxFindings", defaultValue: 40 },
+						visible: () => this.plugin.settings.grammarEnabled,
+					},
+					{
+						name: "Timeout (seconds)",
+						desc: "How long to wait for the model before giving up on a note.",
+						control: { type: "number", key: "grammarTimeoutSeconds", defaultValue: 180 },
+						visible: () => this.plugin.settings.grammarEnabled,
+					},
+					{
+						name: "Replace earlier comments",
+						desc: "Remove existing grammar comments from a note before adding the new findings.",
+						control: { type: "toggle", key: "grammarReplaceExisting", defaultValue: true },
+						visible: () => this.plugin.settings.grammarEnabled,
+					},
+				],
+			},
+			{
 				type: "list",
 				heading: "Workflows",
 				emptyState: "No workflows. Restore the built-in ones or create one in the compile tab of the structure pane.",
@@ -130,6 +199,12 @@ export class NovelrSettingTab extends PluginSettingTab {
 				})),
 			},
 		];
+	}
+
+	override async setControlValue(key: string, value: unknown): Promise<void> {
+		await super.setControlValue(key, value);
+		// The grammar rows show or hide depending on the toggle.
+		if (key === "grammarEnabled") this.refreshDomState();
 	}
 
 	// ---- shared actions -----------------------------------------------------

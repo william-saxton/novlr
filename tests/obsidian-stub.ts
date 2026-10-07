@@ -8,3 +8,5 @@ export function normalizePath(path: string): string {
 export class Notice {
 	constructor(_message: string, _timeout?: number) {}
 }
+
+export const Platform = { isDesktopApp: false, isWin: false, isMobile: true };
