@@ -105,6 +105,8 @@ Proof readers and editors who share the vault can leave comments on your notes, 
 
 Select text in a note that belongs to a project, then right-click › **Add comment to selection** or run **Novelr: Add comment to selection (or note)**. With nothing selected the comment applies to the whole note. Commented passages are highlighted in the editor (turn this off in settings); click a highlight to show its comment.
 
+A comment on a selection can also carry a **suggested change**: switch on *Suggest a change* in the comment dialog and type the replacement. The card then shows the old and new text with **Accept**, **Reject** and **Resolve** buttons. Accept rewrites exactly that passage in the note and records the comment as accepted; Reject resolves it as rejected without touching the note; Resolve closes it with no verdict. If the passage has been edited since the suggestion was made, Accept is disabled and the change has to be applied by hand. Suggestions live in the comment file as `suggestion: "…"` and the outcome as `resolution: "accepted" | "rejected"`.
+
 The **Novelr comments** pane (right sidebar, **Novelr: Open comments pane**) lists comments for the active note or the whole project, filtered by open or resolved, searchable and sortable by position or age. Each comment can be jumped to, replied to, edited, resolved or deleted. Resolving keeps the file with `status: resolved` so the author of the comment sees what happened; deleting moves it to the trash. The structure pane shows a count of open comments next to each note.
 
 A comment file looks like this:
@@ -193,9 +195,9 @@ Turn on **Enable grammar checking** in settings and Novelr can send a note to a 
 >
 > Suggested: She walks to the door.
 
-They sit in the comments pane beside everyone else's, are highlighted in the editor, and can be resolved, replied to or deleted like any other comment. Run a check from the command palette (**Check grammar in current note**, **Check grammar in current container**) or right-click a node in the structure pane; containers are checked one note at a time. **Remove grammar comments** deletes the checker's comments on a note and leaves human ones alone.
+When the checker proposes a concrete replacement it is attached as a suggestion, so one click on **Accept** fixes the text. They sit in the comments pane beside everyone else's, are highlighted in the editor, and can be rejected, resolved, replied to or deleted like any other comment. Run a check from the command palette (**Check grammar in current note**, **Check grammar in current container**) or right-click a node in the structure pane; containers are checked one note at a time. **Remove grammar comments** deletes the checker's comments on a note and leaves human ones alone.
 
-The check runs through the **Claude Code CLI** (`claude -p`) using whatever login and plan the CLI already has, so Novelr never stores an API key. It is desktop only and needs the note to be part of a project. Settings let you pick the model (`--model`), add author guidance such as the dialect you write in, cap findings per note, and choose whether the checker's earlier comments on a note are replaced. Nothing is sent anywhere unless you run a check.
+The check runs through the **Claude Code CLI** (`claude -p`) using whatever login and plan the CLI already has, so Novelr never stores an API key. It is desktop only and needs the note to be part of a project. Settings let you pick the model (`--model`, default `sonnet`), add author guidance such as the dialect you write in, cap findings per note, and choose whether the checker's earlier comments on a note are replaced. Nothing is sent anywhere unless you run a check.
 
 ## What Novelr touches
 

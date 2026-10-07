@@ -5,16 +5,20 @@ import { isInside, join, relativeTo } from "../model/paths";
 import type { Project } from "../model/types";
 import { projects } from "../store/projects";
 import {
+	type AppliedSuggestion,
 	type Comment,
+	type CommentResolution,
 	type CommentStatus,
 	type NewComment,
+	applySuggestion,
+	hasSuggestion,
 	isCommentFrontmatter,
 	newCommentId,
 	parseComment,
 	replaceCommentBody,
 	serializeComment,
 } from "./model";
-import { comments, removeComment, setComment } from "./store";
+import { bumpEditorTick, comments, removeComment, setComment } from "./store";
 
 const AUTHOR_STORAGE_KEY = "novelr-comment-author";
 
@@ -190,6 +194,7 @@ export class CommentManager {
 			anchor: input.anchor,
 			body: input.body.trim(),
 			...(input.replyTo ? { replyTo: input.replyTo } : {}),
+			...(input.anchor && typeof input.suggestion === "string" ? { suggestion: input.suggestion } : {}),
 		};
 		try {
 			await this.ensureFolder(folder);
@@ -203,26 +208,86 @@ export class CommentManager {
 		return comment;
 	}
 
-	async setStatus(comment: Comment, status: CommentStatus, by: string): Promise<void> {
-		if (comment.status === status) return;
+	/** Open or resolve a comment; `resolution` records how a suggestion was settled. */
+	async setStatus(comment: Comment, status: CommentStatus, by: string, resolution?: CommentResolution): Promise<void> {
+		if (comment.status === status && comment.resolution === resolution) return;
 		const updated = new Date().toISOString();
 		const next: Comment = { ...comment, status, updated };
-		if (status === "resolved") next.resolvedBy = by.trim() || "Anonymous";
-		else delete next.resolvedBy;
+		if (status === "resolved") {
+			next.resolvedBy = by.trim() || "Anonymous";
+			if (resolution) next.resolution = resolution;
+			else delete next.resolution;
+		} else {
+			delete next.resolvedBy;
+			delete next.resolution;
+		}
 		setComment(next);
 		await this.patchFrontmatter(comment, (fm) => {
 			fm["status"] = status;
 			fm["updated"] = updated;
 			if (status === "resolved") fm["resolved-by"] = next.resolvedBy;
 			else delete fm["resolved-by"];
+			if (next.resolution) fm["resolution"] = next.resolution;
+			else delete fm["resolution"];
 		});
 	}
 
-	async editBody(comment: Comment, body: string, author: string): Promise<void> {
+	/**
+	 * Apply a suggestion to its note and mark the comment accepted. Returns false (and
+	 * changes nothing) when the passage is no longer exactly where the comment left it.
+	 */
+	async acceptSuggestion(comment: Comment, by: string): Promise<boolean> {
+		if (!hasSuggestion(comment) || comment.suggestion === undefined) return false;
+		const suggestion = comment.suggestion;
+		const file = this.app.vault.getFileByPath(normalizePath(join(comment.rootFolder, comment.note)));
+		if (!file) {
+			new Notice(`${comment.note} was not found.`);
+			return false;
+		}
+		let applied: AppliedSuggestion | null = null;
+		try {
+			await this.app.vault.process(file, (text) => {
+				applied = applySuggestion(text, comment.anchor, suggestion);
+				return applied ? applied.text : text;
+			});
+		} catch (e) {
+			console.error("Novelr: could not apply suggestion", e);
+			new Notice("Could not change the note.");
+			return false;
+		}
+		const result = applied as AppliedSuggestion | null;
+		if (!result) {
+			new Notice("The text has changed since the suggestion was made. Apply it by hand, then resolve the comment.");
+			return false;
+		}
+		const updated = new Date().toISOString();
+		const next: Comment = { ...comment, anchor: result.anchor, status: "resolved", resolution: "accepted", resolvedBy: by.trim() || "Anonymous", updated };
+		setComment(next);
+		bumpEditorTick();
+		await this.patchFrontmatter(comment, (fm) => {
+			fm["status"] = "resolved";
+			fm["resolution"] = "accepted";
+			fm["resolved-by"] = next.resolvedBy;
+			fm["updated"] = updated;
+			fm["quote"] = result.anchor.quote;
+			fm["before"] = result.anchor.before;
+			fm["after"] = result.anchor.after;
+			fm["offset"] = result.anchor.offset;
+		});
+		return true;
+	}
+
+	/** Change body (and, for anchored comments, the suggestion). */
+	async editBody(comment: Comment, body: string, author: string, suggestion?: string): Promise<void> {
 		const trimmed = body.trim();
 		const updated = new Date().toISOString();
 		const next: Comment = { ...comment, body: trimmed, updated };
 		if (author.trim()) next.author = author.trim();
+		const changeSuggestion = comment.anchor !== null && suggestion !== undefined;
+		if (changeSuggestion) {
+			if (suggestion.length > 0) next.suggestion = suggestion;
+			else delete next.suggestion;
+		}
 		setComment(next);
 		const file = this.app.vault.getFileByPath(comment.filePath);
 		if (!file) return;
@@ -231,6 +296,10 @@ export class CommentManager {
 			await this.patchFrontmatter(comment, (fm) => {
 				fm["updated"] = updated;
 				if (author.trim()) fm["author"] = author.trim();
+				if (changeSuggestion) {
+					if (next.suggestion !== undefined) fm["suggestion"] = next.suggestion;
+					else delete fm["suggestion"];
+				}
 			});
 		} catch (e) {
 			console.error("Novelr: could not edit comment", e);

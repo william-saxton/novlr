@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { extractResult } from "../src/grammar/claudeCli";
 import { buildPrompt, parseFindings } from "../src/grammar/prompt";
-import { commentBody, locateFinding, prepareText } from "../src/grammar/text";
+import { commentBody, locateFinding, prepareText, suggestionFor } from "../src/grammar/text";
 
 const note = "---\nnovelr-type: scene\n---\n\n# Opening\n\nShe walk to the door.\n\nIt were cold outside.\n";
 
@@ -63,5 +63,19 @@ describe("prompt", () => {
 		expect(extractResult('{"type":"result","is_error":false,"result":"[]"}')).toBe("[]");
 		expect(extractResult("[]")).toBe("[]");
 		expect(() => extractResult('{"is_error":true,"result":"Not logged in"}')).toThrow(/Not logged in/);
+	});
+});
+
+describe("suggestionFor", () => {
+	it("uses the fix only when it replaces exactly the anchored quote", () => {
+		expect(suggestionFor({ line: 1, quote: "She walk", issue: "", fix: "She walked" }, "She walk")).toBe("She walked");
+		expect(suggestionFor({ line: 1, quote: "She walk", issue: "", fix: "She walk" }, "She walk")).toBeUndefined();
+		expect(suggestionFor({ line: 1, quote: "She walk", issue: "", fix: "" }, "She walk")).toBeUndefined();
+		expect(suggestionFor({ line: 1, quote: "She walk to", issue: "", fix: "She walked to" }, "She walk")).toBeUndefined();
+	});
+
+	it("commentBody omits the suggested line when a suggestion is attached", () => {
+		expect(commentBody({ line: 1, quote: "a", issue: "Tense", fix: "b" }, true)).toBe("Tense");
+		expect(commentBody({ line: 1, quote: "a", issue: "", fix: "b" }, true)).toBe("");
 	});
 });

@@ -130,13 +130,19 @@ export default class NovelrPlugin extends Plugin {
 		const anchor = editor.somethingSelected() ? makeAnchor(text, Math.min(from, to), Math.max(from, to)) : null;
 		const result = await promptComment(this.app, {
 			title: anchor ? "Comment on selection" : `Comment on ${located.note}`,
-			...(anchor ? { quote: anchor.quote } : {}),
+			...(anchor ? { quote: anchor.quote, allowSuggestion: true } : {}),
 			author: this.comments.author(),
 			submitText: "Add comment",
 		});
 		if (!result) return;
 		this.comments.setAuthor(result.author);
-		const created = await this.comments.create(located.project, { note: located.note, author: result.author, body: result.body, anchor });
+		const created = await this.comments.create(located.project, {
+			note: located.note,
+			author: result.author,
+			body: result.body,
+			anchor,
+			...(result.suggestion !== undefined ? { suggestion: result.suggestion } : {}),
+		});
 		if (created) await this.openCommentsPane(false);
 	}
 

@@ -70,12 +70,25 @@ export function locateFinding(prepared: PreparedText, finding: GrammarFinding): 
 	return null;
 }
 
+/**
+ * The replacement to attach as an acceptable suggestion: the model's fix when it is a real
+ * change to exactly the anchored text. Undefined means "comment only".
+ */
+export function suggestionFor(finding: GrammarFinding, anchoredQuote: string): string | undefined {
+	const fix = finding.fix.trim();
+	if (fix.length === 0 || anchoredQuote.length === 0) return undefined;
+	if (fix === anchoredQuote) return undefined;
+	// The fix must replace the quote as anchored; if the model quoted more than we anchored, keep it as text only.
+	if (finding.quote.trim() !== anchoredQuote) return undefined;
+	return fix;
+}
+
 /** Body text of the comment created for a finding. */
-export function commentBody(finding: GrammarFinding): string {
+export function commentBody(finding: GrammarFinding, hasSuggestion = false): string {
 	const issue = finding.issue.trim();
 	const fix = finding.fix.trim();
 	const parts: string[] = [];
 	if (issue) parts.push(issue);
-	if (fix && fix !== finding.quote.trim()) parts.push(`Suggested: ${fix}`);
-	return parts.join("\n\n") || "Possible grammar issue.";
+	if (!hasSuggestion && fix && fix !== finding.quote.trim()) parts.push(`Suggested: ${fix}`);
+	return parts.join("\n\n") || (hasSuggestion ? "" : "Possible grammar issue.");
 }

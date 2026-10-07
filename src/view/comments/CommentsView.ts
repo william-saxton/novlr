@@ -72,6 +72,8 @@ export class CommentsView extends ItemView {
 			reply: (comment) => void this.reply(this.live(comment)),
 			edit: (comment) => void this.edit(this.live(comment)),
 			setStatus: (comment, status) => void this.setStatus(this.live(comment), status),
+			accept: (comment) => void this.accept(this.live(comment)),
+			reject: (comment) => void this.manager.setStatus(this.live(comment), "resolved", this.manager.author(), "rejected"),
 			delete: (comment) => void this.delete(this.live(comment)),
 			jump: (comment) => void this.jump(this.live(comment)),
 			anchorState: (comment) => this.anchorState(comment),
@@ -164,16 +166,29 @@ export class CommentsView extends ItemView {
 	}
 
 	private async edit(comment: Comment): Promise<void> {
+		const anchored = comment.anchor !== null && !comment.replyTo;
 		const result = await promptComment(this.app, {
 			title: "Edit comment",
 			...(comment.anchor ? { quote: comment.anchor.quote } : {}),
 			author: comment.author,
 			lockAuthor: true,
 			initial: comment.body,
+			allowSuggestion: anchored && comment.status === "open",
+			...(comment.suggestion !== undefined ? { initialSuggestion: comment.suggestion } : {}),
 			submitText: "Save",
 		});
-		if (!result || result.body.trim() === comment.body) return;
-		await this.manager.editBody(comment, result.body, "");
+		if (!result) return;
+		const nextSuggestion = anchored ? (result.suggestion ?? "") : undefined;
+		const suggestionChanged = anchored && (result.suggestion ?? undefined) !== comment.suggestion;
+		if (result.body.trim() === comment.body && !suggestionChanged) return;
+		await this.manager.editBody(comment, result.body, "", nextSuggestion);
+	}
+
+	/** Flush any open editor of the note first so the vault copy the change is applied to is current. */
+	private async accept(comment: Comment): Promise<void> {
+		const view = this.viewFor(comment);
+		if (view) await view.save();
+		await this.manager.acceptSuggestion(comment, this.manager.author());
 	}
 
 	private async setStatus(comment: Comment, status: CommentStatus): Promise<void> {

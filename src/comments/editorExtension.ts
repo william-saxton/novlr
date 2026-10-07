@@ -3,7 +3,7 @@ import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate
 import { editorInfoField } from "obsidian";
 import { get } from "svelte/store";
 import type NovelrPlugin from "../main";
-import { type Comment, locateAnchor, previewQuote } from "./model";
+import { type Comment, hasSuggestion, locateAnchor, previewQuote } from "./model";
 import { comments, focusedCommentId } from "./store";
 
 /** Dispatch to re-anchor every highlight from scratch (after edits settle or comments change). */
@@ -78,7 +78,7 @@ export function commentHighlighter(plugin: NovelrPlugin) {
 				return Decoration.set(
 					marks.map((m) =>
 						Decoration.mark({
-							class: `${COMMENT_MARK_CLASS}${m.exact ? "" : " is-moved"}`,
+							class: `${COMMENT_MARK_CLASS}${m.exact ? "" : " is-moved"}${hasSuggestion(m.comment) ? " is-suggestion" : ""}`,
 							attributes: {
 								"data-novelr-comment": m.comment.id,
 								title: `${m.comment.author}: ${previewQuote(m.comment.body, 120)}`,

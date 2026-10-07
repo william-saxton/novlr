@@ -8,7 +8,7 @@ import { contentNodes } from "../model/tree";
 import type { Project, ProjectNode } from "../model/types";
 import { ClaudeCliProvider } from "./claudeCli";
 import { buildPrompt, parseFindings } from "./prompt";
-import { commentBody, locateFinding, prepareText } from "./text";
+import { commentBody, locateFinding, prepareText, suggestionFor } from "./text";
 import type { GrammarFinding, GrammarProvider, GrammarResult } from "./types";
 
 /** Author recorded on comments the checker creates, so they can be told apart and cleared. */
@@ -132,11 +132,13 @@ export class GrammarService {
 				continue;
 			}
 			const anchor = makeAnchor(text, span.from, span.to);
+			const suggestion = suggestionFor(finding, anchor?.quote ?? "");
 			const created = await this.plugin.comments.create(located.project, {
 				note: located.note,
 				author: GRAMMAR_AUTHOR,
-				body: commentBody(finding),
+				body: commentBody(finding, suggestion !== undefined),
 				anchor,
+				...(suggestion !== undefined ? { suggestion } : {}),
 			});
 			if (created) placed++;
 			else unplaced.push(finding);

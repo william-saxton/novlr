@@ -8,6 +8,8 @@ export const DEFAULT_COMMENTS_FOLDER = "_comments";
 export const CONTEXT_CHARS = 40;
 
 export type CommentStatus = "open" | "resolved";
+/** How a resolved suggestion was settled; absent for plain resolves and open comments. */
+export type CommentResolution = "accepted" | "rejected";
 
 /** Where a comment sits in its note. `quote` is "" for note-level comments. */
 export interface CommentAnchor {
@@ -36,9 +38,12 @@ export interface Comment {
 	updated?: string;
 	status: CommentStatus;
 	resolvedBy?: string;
+	resolution?: CommentResolution;
 	/** Id of the comment this one replies to; replies inherit the parent's anchor. */
 	replyTo?: string;
 	anchor: CommentAnchor | null;
+	/** Proposed replacement for the anchored quote; the author can accept or reject it. */
+	suggestion?: string;
 	body: string;
 }
 
@@ -49,6 +54,7 @@ export interface NewComment {
 	body: string;
 	anchor: CommentAnchor | null;
 	replyTo?: string;
+	suggestion?: string;
 }
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -106,7 +112,36 @@ export function parseComment(filePath: string, rootFolder: string, frontmatter: 
 	if (resolvedBy) comment.resolvedBy = resolvedBy;
 	const replyTo = asString(fm["reply-to"]);
 	if (replyTo) comment.replyTo = replyTo;
+	const suggestion = asString(fm["suggestion"]);
+	if (suggestion !== undefined && anchor) comment.suggestion = suggestion;
+	const resolution = fm["resolution"];
+	if (status === "resolved" && (resolution === "accepted" || resolution === "rejected")) comment.resolution = resolution;
 	return comment;
+}
+
+/** True when the comment proposes a concrete text change the author can accept. */
+export function hasSuggestion(comment: Comment): boolean {
+	return comment.anchor !== null && typeof comment.suggestion === "string";
+}
+
+export interface AppliedSuggestion {
+	text: string;
+	/** Anchor re-pointed at the replacement so the comment still jumps to the right place. */
+	anchor: CommentAnchor;
+}
+
+/**
+ * Replace the anchored passage in `text` with `suggestion`. Only an exact, unchanged match
+ * is rewritten; returns null when the passage moved, changed or is gone, so nothing is
+ * applied to the wrong words.
+ */
+export function applySuggestion(text: string, anchor: CommentAnchor | null, suggestion: string): AppliedSuggestion | null {
+	if (!anchor) return null;
+	const hit = locateAnchor(text, anchor);
+	if (!hit || !hit.exact) return null;
+	const next = text.slice(0, hit.from) + suggestion + text.slice(hit.to);
+	const reanchored = makeAnchor(next, hit.from, hit.from + suggestion.length) ?? { ...anchor, quote: suggestion, offset: hit.from };
+	return { text: next, anchor: reanchored };
 }
 
 /** YAML scalar for a string: JSON strings are valid YAML double-quoted scalars. */
@@ -126,12 +161,14 @@ export function commentFrontmatter(comment: Comment): Record<string, string | nu
 	if (comment.updated) fm["updated"] = comment.updated;
 	fm["status"] = comment.status;
 	if (comment.resolvedBy) fm["resolved-by"] = comment.resolvedBy;
+	if (comment.resolution) fm["resolution"] = comment.resolution;
 	if (comment.replyTo) fm["reply-to"] = comment.replyTo;
 	if (comment.anchor) {
 		fm["quote"] = comment.anchor.quote;
 		fm["before"] = comment.anchor.before;
 		fm["after"] = comment.anchor.after;
 		fm["offset"] = comment.anchor.offset;
+		if (typeof comment.suggestion === "string") fm["suggestion"] = comment.suggestion;
 	}
 	return fm;
 }

@@ -65,7 +65,7 @@ export const DEFAULT_SETTINGS: NovelrSettings = {
 	grammarEnabled: false,
 	grammarProvider: "claude-cli",
 	grammarCliPath: "claude",
-	grammarModel: "",
+	grammarModel: "sonnet",
 	grammarInstructions: "",
 	grammarMaxFindings: 40,
 	grammarTimeoutSeconds: 180,
@@ -145,8 +145,8 @@ export class NovelrSettingTab extends PluginSettingTab {
 					},
 					{
 						name: "Model",
-						desc: "Passed to the CLI as --model. Leave empty to use the CLI's default; otherwise an id such as claude-opus-5-5 or an alias such as sonnet.",
-						control: { type: "text", key: "grammarModel", placeholder: "claude-opus-5-5" },
+						desc: "Passed to the CLI as --model. The alias sonnet picks the current Sonnet, which is plenty for proofreading; use opus or a full id such as claude-opus-5-5 for more careful reads. Leave empty for the CLI's default.",
+						control: { type: "text", key: "grammarModel", defaultValue: "sonnet", placeholder: "sonnet" },
 						visible: () => this.plugin.settings.grammarEnabled,
 					},
 					{

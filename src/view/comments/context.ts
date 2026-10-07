@@ -11,6 +11,10 @@ export interface CommentCallbacks {
 	reply(comment: Comment): void;
 	edit(comment: Comment): void;
 	setStatus(comment: Comment, status: CommentStatus): void;
+	/** Apply the suggested text to the note and mark the comment accepted. */
+	accept(comment: Comment): void;
+	/** Resolve the comment without changing the note, marked rejected. */
+	reject(comment: Comment): void;
 	delete(comment: Comment): void;
 	/** Open the note and select the commented text. */
 	jump(comment: Comment): void;

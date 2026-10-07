@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	applySuggestion,
 	buildThreads,
 	type Comment,
 	locateAnchor,
@@ -159,5 +160,69 @@ describe("formatRelative", () => {
 		expect(formatRelative("2026-09-26T07:00:00Z", now)).toBe("5h ago");
 		expect(formatRelative("2026-09-24T12:00:00Z", now)).toBe("2d ago");
 		expect(formatRelative("garbage", now)).toBe("garbage");
+	});
+});
+
+describe("suggestions", () => {
+	const text = "It was a dark and stormy night. The rain fell in torrents, except at occasional intervals.";
+	const start = text.indexOf("The rain fell in torrents");
+	const anchor = makeAnchor(text, start, start + "The rain fell in torrents".length)!;
+
+	it("round-trips suggestion and resolution through the file format", () => {
+		const comment: Comment = {
+			id: "20260926-134012-k3x9",
+			filePath: "P/_comments/20260926-134012-k3x9.md",
+			rootFolder: "P",
+			note: "Chapter One/Opening.md",
+			author: "Jane",
+			created: "2026-09-26T13:40:12.000Z",
+			status: "resolved",
+			resolvedBy: "Will",
+			resolution: "accepted",
+			anchor,
+			suggestion: "Rain hammered down",
+			body: "Tighter.",
+		};
+		const file = serializeComment(comment);
+		expect(file).toContain('suggestion: "Rain hammered down"');
+		expect(file).toContain('resolution: "accepted"');
+		const fm = Object.fromEntries(
+			file.split("\n---\n")[0]!.replace(/^---\n/, "").split("\n").map((l) => {
+				const i = l.indexOf(": ");
+				const raw = l.slice(i + 2);
+				return [l.slice(0, i), raw.startsWith('"') ? JSON.parse(raw) : Number(raw)];
+			}),
+		);
+		const parsed = parseComment(comment.filePath, "P", fm, file)!;
+		expect(parsed.suggestion).toBe("Rain hammered down");
+		expect(parsed.resolution).toBe("accepted");
+		expect(parsed.status).toBe("resolved");
+	});
+
+	it("ignores a resolution on an open comment and a suggestion without an anchor", () => {
+		const fm = { "novelr-comment": 1, id: "x", note: "n.md", status: "open", resolution: "accepted", suggestion: "y" };
+		const parsed = parseComment("P/_comments/x.md", "P", fm, "---\n---\n")!;
+		expect(parsed.resolution).toBeUndefined();
+		expect(parsed.suggestion).toBeUndefined();
+	});
+
+	it("applySuggestion rewrites an exact match and re-anchors", () => {
+		const r = applySuggestion(text, anchor, "Rain hammered down")!;
+		expect(r.text).toBe("It was a dark and stormy night. Rain hammered down, except at occasional intervals.");
+		expect(r.anchor.quote).toBe("Rain hammered down");
+		expect(r.anchor.offset).toBe(32);
+		expect(locateAnchor(r.text, r.anchor)).toMatchObject({ from: 32, to: 50, exact: true });
+	});
+
+	it("applySuggestion refuses when the passage changed or vanished", () => {
+		const edited = text.replace("fell in torrents", "poured");
+		expect(applySuggestion(edited, anchor, "x")).toBeNull();
+		expect(applySuggestion("Nothing here.", anchor, "x")).toBeNull();
+		expect(applySuggestion(text, null, "x")).toBeNull();
+	});
+
+	it("applySuggestion can delete the passage", () => {
+		const r = applySuggestion(text, anchor, "")!;
+		expect(r.text).toBe("It was a dark and stormy night. , except at occasional intervals.");
 	});
 });
